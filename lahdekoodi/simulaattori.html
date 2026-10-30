@@ -30,6 +30,7 @@
 <section id="start" class="screen">
   <div class="start-inner">
     <h1>Simulaattori</h1>
+    <div class="warn" id="testBadge" hidden><b>Testiversio.</b> Kouluttaja ja puheyhteys ovat kokeiltavana. Tuotantoversio on erikseen.</div>
     <p class="sub">Pv417 Repa Näsijärvellä. Navigointiharjoitus päivällä ja yöllä, yksin tai kahdestaan.</p>
 
     <div class="field" role="group" aria-labelledby="lblCrew">
@@ -38,17 +39,24 @@
         <button type="button" data-v="solo" class="on">Yksin<small>yksi laite</small></button>
         <button type="button" data-v="nav">Navigoija<small>liittyy koodilla</small></button>
         <button type="button" data-v="helm">Ruorimies<small>aloittaa istunnon</small></button>
+        <button type="button" data-v="koul">Kouluttaja<small>liittyy koodilla (testi)</small></button>
       </div>
       <div id="crewHelm" class="crew-box" hidden>
         <div>Istuntokoodi <b id="crewCode" class="crew-code">----</b></div>
         <div class="hint" id="crewHelmSt"></div>
-        <div class="hint">Navigoija valitsee omalla laitteellaan Navigoija ja syöttää koodin. Ruorimiehellä ovat komennot ja navigoijan plotteri tai tutka ilman säätöjä. Puhe kulkee erikseen.</div>
+        <div class="hint">Navigoija ja kouluttaja valitsevat omalla laitteellaan roolinsa ja syöttävät koodin. Ruorimiehellä ovat komennot ja navigoijan plotteri tai tutka ilman säätöjä.</div>
       </div>
       <div id="crewNav" class="crew-box" hidden>
         <input type="text" id="crewIn" class="keyin" maxlength="6" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false" placeholder="Istuntokoodi" aria-label="Istuntokoodi">
         <button type="button" id="crewJoin" class="big primary">Liity</button>
         <div class="hint" id="crewNavSt"></div>
-        <div class="hint">Navigoijalla ovat plotteri ja tutka säätöineen, komennot annetaan ruorimiehelle puheella. Reitti, aika ja ajo tulevat ruorimiehen laitteelta.</div>
+        <div class="hint" id="crewNavHint">Navigoijalla ovat plotteri ja tutka säätöineen, komennot annetaan ruorimiehelle puheella. Reitti, aika ja ajo tulevat ruorimiehen laitteelta.</div>
+      </div>
+      <!-- puheyhteys (testiversio): ääni kulkee laitteiden välillä suoraan, mikrofonilupa pyydetään liityttäessä -->
+      <div id="crewVoiceRow" class="crew-box" hidden>
+        <label class="crew-voice"><input type="checkbox" id="crewVoice" checked> Puheyhteys selaimen kautta (testi)</label>
+        <div class="hint" id="crewVoiceSt" role="status"></div>
+        <div class="hint">Käytä kuulokkeita, jos laitteet ovat samassa tilassa, ettei ääni kierrä. Sivun on oltava auki ja näytön päällä.</div>
       </div>
     </div>
 
@@ -165,6 +173,7 @@
     <div id="clock" aria-label="Kello">--:--:--</div>
     <div id="exName" class="ex-name"></div>
     <span id="crewBadge" class="crew-badge" hidden></span>
+    <button type="button" class="ib txt voice-btn" id="voiceBtn" aria-pressed="false" hidden>Puhe ✕</button>
     <button type="button" class="ib txt" id="instrBtn" aria-label="Vaihda mittari" hidden>Tutka</button>
     <button type="button" class="ib txt" id="speedBtn" aria-label="Aikakerroin">1×</button>
     <button type="button" class="ib" id="pauseBtn" aria-label="Tauko">
@@ -191,6 +200,7 @@
         <div class="hud ro ro-vrm">VRM 0,50 mpk</div>
         <div class="hud ro ro-vec" id="vecBtn" role="button" tabindex="0" aria-label="Vaihda vektorin aika">Vektori 1 min</div>
       </div>
+      <div id="plotFault" hidden>Ei kuvaa</div>
       <div id="plotOff" hidden>Plotteri pois<button type="button" id="plotOnBtn" class="big">Päälle</button></div>
       <div class="hud hud-zoom" id="zoomBox" role="group" aria-label="Zoomaus ja keskitys">
         <button type="button" class="zm zm-out" id="zOut" aria-label="Loitonna, alue suuremmaksi (näppäin +)"><svg viewBox="0 0 24 24" width="30" height="30"><circle cx="12" cy="12" r="9.5" fill="none" stroke="#d0d0d0" stroke-width="2.2"/><path d="M7 12h10M12 7v10" stroke="#d0d0d0" stroke-width="2.4" stroke-linecap="round"/></svg></button>
@@ -235,6 +245,40 @@
       </div>
     </div>
     <div id="toast" role="status" hidden></div>
+    <!-- kouluttajan paneeli (testiversio): häiriöt, merkinnät purkuun, tauko, puhe ja käskyloki -->
+    <aside id="koulPanel" class="koul-panel" hidden aria-label="Kouluttaja">
+      <button type="button" id="koulHead" class="koul-head" aria-expanded="true">Kouluttaja</button>
+      <div class="koul-body">
+        <div class="koul-sec"><div class="koul-lbl">Puhe</div>
+          <div class="koul-row" id="koulVoice">
+            <button type="button" data-v="kuuntele" aria-pressed="false" title="Kuulet miehistön, miehistö ei kuule sinua">Kuuntele</button>
+            <button type="button" data-v="puhu" aria-pressed="false">Puhu</button>
+            <button type="button" data-v="radio" aria-pressed="false" title="Ääni kuin VHF-radiosta">Radio</button>
+          </div>
+          <label class="koul-chk"><input type="checkbox" id="koulNavOnly"> Vain navigoijalle</label>
+          <div class="hint" id="koulVoiceSt"></div>
+        </div>
+        <div class="koul-sec"><div class="koul-lbl">Häiriöt</div>
+          <div class="koul-row wrap" id="koulFaults">
+            <button type="button" data-k="kohina" aria-pressed="false">Tutkan kohina</button>
+            <button type="button" data-k="heikko" aria-pressed="false">Heikko lähetin</button>
+            <button type="button" data-k="suunta" aria-pressed="false">Suuntavirhe 12°</button>
+            <button type="button" data-k="tutka" aria-pressed="false">Tutka pimeä</button>
+            <button type="button" data-k="plotteri" aria-pressed="false">Plotteri pimeä</button>
+          </div>
+          <label class="koul-chk"><input type="checkbox" id="koulIlm"> Ilmoita miehistölle</label>
+        </div>
+        <div class="koul-sec"><div class="koul-lbl">Merkintä purkuun</div>
+          <div class="koul-row" id="koulMarks">
+            <button type="button" data-v="hyva" class="mk-hyva">Hyvä</button>
+            <button type="button" data-v="huomio" class="mk-huomio">Huomio</button>
+            <button type="button" data-v="virhe" class="mk-virhe">Virhe</button>
+          </div>
+        </div>
+        <div class="koul-sec"><button type="button" id="koulPause" class="koul-wide">Tauko kaikille</button></div>
+        <div class="koul-sec"><div class="koul-lbl">Käskyloki</div><ol id="koulLog" class="koul-log"></ol></div>
+      </div>
+    </aside>
   </div>
 
   <div id="cmd">
@@ -336,6 +380,7 @@
 <script src="simulaattori/js/vesimaski3d.js"></script>
 <script src="simulaattori/js/nakyma.js"></script>
 <script src="simulaattori/js/miehisto.js"></script>
+<script src="simulaattori/js/puhe.js"></script>
 <script src="simulaattori/js/valot3d.js"></script>
 <script src="simulaattori/js/aallot.js"></script>
 <script src="simulaattori/js/google3d.js"></script>

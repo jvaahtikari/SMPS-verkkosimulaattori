@@ -56,6 +56,8 @@ Simulaattori toimii tietokoneella, tabletilla ja puhelimella ilman asennusta ja 
 **Miehistötila**
 
 - Kaksi laitetta samassa veneessä: ruorimies aloittaa istunnon ja antaa koodin, navigoija liittyy koodilla. Navigoijalla ovat plotteri ja tutka säätöineen, ruorimiehellä komennot ja navigoijan mittarit ilman säätöjä. Komennot annetaan puheella. Valonheittimet ja tutkan SEA-asetus välittyvät.
+- **Testiversio (haara `testi`):** kolmantena laitteena kouluttaja, joka liittyy samalla koodilla. Hän näkee navigoijan plotterin ja tutkan ja 3D-näkymän navigoijan paikalta, käynnistää laitehäiriöt (tutkan kohina, heikko lähetin, suuntavirhe, tutka pimeä, plotteri pimeä, hiljaa tai miehistölle ilmoittaen), tekee merkintöjä purkuun ja pitää tauon kaikille. Häiriöt ja merkinnät näkyvät purun komentolokissa.
+- **Testiversio: puheyhteys** selaimen kautta (WebRTC, `puhe.js`). Ääni kulkee laitteiden välillä suoraan, Supabasen kanavalla kulkee vain yhteyden avaus. Ruorimiehellä ja navigoijalla on mikrofonin mykistys, kouluttajalla tilat Kuuntele, Puhu ja Radio (VHF:n kaltainen ääni), ja puheen voi rajata vain navigoijalle.
 
 ## Käyttö
 
@@ -137,6 +139,7 @@ Simulaattorin moduulit:
 | `tormays.js`, `pohja.js` | Törmäykset ja pohjakosketus |
 | `google3d.js`, `vesimaski3d.js`, `kalibrointi.js` | Google 3D -maisema, oma vesi sen päällä ja kalibrointityökalu (`?kalibrointi=1`) |
 | `miehisto.js` | Miehistötilan yhteys (Supabase Realtime, paikallisesti BroadcastChannel) |
+| `puhe.js` | Miehistötilan puheyhteys (WebRTC, testiversio) |
 | `aineisto.js`, `mvt.js`, `paikka.js` | Aineistopaketin luku (PMTiles, MVT, Terrain-RGB) ja koordinaatit |
 | `runko.js` | Repan runkomalli |
 
@@ -153,6 +156,7 @@ Sovellus julkaistaan Verceliin sellaisenaan: Vercel tarjoilee repon juuren tiedo
 | `SIMU_URL` | Supabase-projektin osoite (oletus nykyinen projekti) | Ei |
 | `GOOGLE_API` | Google Maps -avain Google 3D -maisemaan, rajattu sivuston osoitteeseen | Google 3D:hen |
 | `MML_API_KEY` | Maanmittauslaitoksen avoimen rajapinnan avain Reittikartan haulle | Reittikartan MML-hakuun |
+| `SIMU_ICE` | Puheyhteyden ICE-palvelimet JSON-taulukkona, esim. TURN-palvelin rajoittavia verkkoja varten (testiversio). Ilman sitä käytetään julkista STUN-palvelinta. | Ei |
 
 Ilman avaimia simulaattori toimii omalla maisemallaan yksin ajaen.
 
@@ -195,6 +199,8 @@ for t in lahdekoodi/simulaattori/testit/*_test.js; do node "$t"; done
 ```
 
 Liike-, tuuli-, aalto-, peruutus-, harjoitus- ja Google-kameran testit toimivat ilman verkkoa. `mvt`, `sillat3d`, `tormays` ja `veneet3o` lukevat aineistopakettia verkosta.
+
+Testiversio julkaistaan Vercelin haaraosoitteeseen (`<projekti>-git-testi-<tili>.vercel.app`): `vercel.json` rakentaa haarat `main` ja `testi`. Haaraosoitteessa aloitusnäytöllä näkyy merkintä Testiversio.
 
 Selaintestit (Playwright ja Chromium) ovat hakemistossa `lahdekoodi/simulaattori/testit/selain/`, ja niiden käyttö on kuvattu tiedostossa [LUE.md](lahdekoodi/simulaattori/testit/selain/LUE.md). Tärkein on päällekkäisyystesti `overlap.js`, joka tarkistaa käyttöliittymän seitsemällä laitekoolla. Vanhemmat Playwright-testit ovat Python-skripteinä (`*_pw.py`), ja Reittikartan testit hakemistossa `lahdekoodi/tests/`.
 

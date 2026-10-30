@@ -4,8 +4,8 @@ Suunnitellut, mutta vielä toteuttamattomat asiat. Valmiit ominaisuudet on kuvat
 
 ## Kouluttaja ja vikatilanteet
 
-- **Kouluttajan rooli miehistötilaan:** kolmas laite, joka seuraa ajoa ja käynnistää häiriöitä ja tapahtumia kesken ajon.
-- **Laitehäiriöt:** tutkassa on valmiina rajapinta `asetaHairio({ kohina, heikko, suuntavirhe, pois })` (vastaanottimen kohina, heikko lähetin, suuntavirhe, tutka pois), ja plotterin voi sammuttaa (`G.plotterOn`). Puuttuu käyttöliittymä, josta kouluttaja ne laukaisee, ja kirjaus purkuun.
+- **Kouluttajan rooli ja puhe (testiversiossa, haara `testi`):** kouluttaja kolmantena laitteena, tutkan ja plotterin häiriöt, merkinnät purkuun, tauko kaikille ja puheyhteys. Kokeiltava oikeilla laitteilla ja verkoilla (iPhone, mobiiliverkko, TURN-tarve) ennen tuotantoon vientiä.
+- **Kouluttajan jatko:** tehtävän anto kartalta (kohde navigoijalle), automaattiset hälytykset kouluttajalle (matalikko edessä, poikkeama reitiltä), ajastetut skenaariot, puheen tallenne purkuun (suostumuksella, vain kouluttajan laitteella), moottorin melu puheen taustalle.
 - **Muut viat:** esimerkiksi toisen jetin menetys, ohjausvika tai GPS-katko liikemalliin ja plotteriin.
 
 ## Sää ja näkyvyys

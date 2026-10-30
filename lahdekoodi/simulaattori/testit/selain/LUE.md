@@ -24,6 +24,7 @@ node lahdekoodi/simulaattori/testit/selain/overlap.js
 | `overlapyo.js` | Sama yöaikaan valonheitinnapit näkyvissä |
 | `snp.js` | Plotterin SARNav-tietopalstan mahtuminen eri ruuduilla |
 | `crewspot.js` | Miehistötila kahdella välilehdellä: valonheittimien välitys |
+| `kouluttaja.js` | Miehistötila kolmella välilehdellä (testiversio): puheyhteydet ja äänen reititys valemikrofonilla, kouluttajan häiriöt, merkinnät, tauko ja purun loki |
 | `free.js` | Jetit kytketty tai vapaalla: paikallaan pito ja ajelehtiminen |
 | `wind.js` | Tuuli, sorto, COG ja SOG plotterissa |
 | `live.js` | Nykyinen sää (Open-Meteo korvataan tyngällä) |

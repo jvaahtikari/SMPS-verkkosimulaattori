@@ -1,11 +1,12 @@
-/* Simulaattori – miehistötilan (kaksinpeli) yhteys, 28.10.2026.
+/* Simulaattori – miehistötilan yhteys, 28.10.2026 (kouluttaja ja puhe testiversiossa 30.10.2026).
  *
  * Kaksi laitetta samassa veneessä: ruorimies (isäntä) laskee aluksen liikkeen ja lähettää tilan, navigoija liittyy istuntokoodilla ja lähettää mittariensa säädöt.
+ * Kouluttaja liittyy samalla koodilla kolmantena: hän saa molempien viestit ja lähettää häiriöt, merkinnät ja tauon. Puheyhteyden avaus (puhe.js) kulkee samalla kanavalla.
  * Viestit kulkevat Supabase Realtimen Broadcast-kanavalla "repa-sim-KOODI" (ei tietokantaa, mitään ei tallenneta). Yhteysasetukset (osoite ja publishable-avain)
  * haetaan Vercelin reitiltä /api/simu (ympäristömuuttuja SIMU). Paikallisessa testissä (localhost, tiedosto tai ?yhteys=paikallinen) viestit kulkevat selaimen
  * BroadcastChannel-kanavalla saman selaimen ikkunoiden välillä.
  *
- * Viesti: { t: tyyppi, d: data, r: lähettäjän rooli ('helm' tai 'nav') }. */
+ * Viesti: { t: tyyppi, d: data, r: lähettäjän rooli ('helm', 'nav' tai 'koul') }. */
 (function (root) {
   'use strict';
   var CODE_CHARS = 'ABCDEFGHJKLMNPRSTUVXYZ23456789';   // ei sekoittuvia merkkejä (I, O, Q, W, 0, 1)
@@ -71,5 +72,12 @@
     return link;
   }
 
-  root.Miehisto = { open: open, newCode: newCode, cleanCode: cleanCode, isLocal: isLocal };
+  // Puheyhteyden ICE-palvelimet: /api/simu antaa ne Vercelin muuttujasta SIMU_ICE (esim. TURN), muuten julkinen STUN
+  function iceServers() {
+    var def = [{ urls: 'stun:stun.l.google.com:19302' }];
+    if (isLocal()) return Promise.resolve(def);
+    return config().then(function (c) { return c && Array.isArray(c.ice) && c.ice.length ? c.ice : def; });
+  }
+
+  root.Miehisto = { open: open, newCode: newCode, cleanCode: cleanCode, isLocal: isLocal, iceServers: iceServers };
 })(typeof window !== 'undefined' ? window : globalThis);

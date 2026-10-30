@@ -300,6 +300,43 @@ input[type=date]{margin-top:8px;min-height:48px;font-size:18px;padding:6px 10px;
 #game.crew-helm #paneR canvas,#game.crew-helm #paneR .tutka-ui,#game.crew-helm #paneR button{pointer-events:none!important}
 #game.crew-helm #paneP .sn-tools,#game.crew-helm #paneP .hud-zoom{opacity:.55}
 
+/* Kouluttaja ja puhe (testiversio, 30.10.2026) */
+#game.crew-koul #cmd .row,#game.crew-koul #speedBtn,#game.crew-koul #pauseBtn,#game.crew-koul #groundGo,#game.crew-koul #groundBtn,#game.crew-koul #spotBox,#game.crew-koul #plotOnBtn,#game.crew-koul #radarOnBtn{display:none!important}
+#game.crew-koul #paneP .plot-canvas,#game.crew-koul #paneP .sn-tools,#game.crew-koul #paneP .hud-zoom,#game.crew-koul #paneP .ro-vec,#game.crew-koul #paneP .plot-info,
+#game.crew-koul #paneR canvas,#game.crew-koul #paneR .tutka-ui,#game.crew-koul #paneR button{pointer-events:none!important}
+#game.crew-koul #paneP .sn-tools,#game.crew-koul #paneP .hud-zoom{opacity:.55}
+.crew-voice{display:flex;align-items:center;gap:8px;font-weight:600;min-height:36px}
+.crew-voice input,.koul-chk input{width:20px;height:20px;accent-color:#ffd24a}
+.voice-btn{flex:none;font-size:12px;white-space:nowrap}
+#game.crew-koul .crew-badge,#game.crew-nav .crew-badge,#game.crew-helm .crew-badge{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.voice-btn[hidden]{display:none}
+.voice-btn[aria-pressed=true]{background:#1f5d3a}
+.voice-btn.warn{box-shadow:0 0 0 2px #c0602a inset}
+#plotFault{position:absolute;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;background:#0b0f14;color:#5f6b78;font:700 18px/1 ui-monospace,Menlo,monospace;letter-spacing:2px}
+#plotFault[hidden]{display:none}
+.koul-panel{position:absolute;top:8px;right:8px;z-index:60;width:min(300px,calc(100% - 16px));max-height:calc(100% - 16px);display:flex;flex-direction:column;background:rgba(14,28,40,.94);border:1px solid #e0a040;border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,.5);color:#fff;font-size:13px}
+.koul-panel[hidden]{display:none}
+.koul-head{flex:none;min-height:40px;padding:6px 12px;border:0;background:transparent;color:#ffd24a;font-family:inherit;font-size:14px;font-weight:700;text-align:left;cursor:pointer}
+.koul-head::after{content:' ▾';color:#c9b27a}
+.koul-panel.min .koul-head::after{content:' ▸'}
+.koul-panel.min .koul-body{display:none}
+.koul-body{overflow:auto;padding:0 10px 10px}
+.koul-sec{margin-top:8px}
+.koul-lbl{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#9fb3c4;margin-bottom:4px}
+.koul-row{display:flex;gap:6px}
+.koul-row.wrap{flex-wrap:wrap}
+.koul-row button,.koul-wide{flex:1 1 auto;min-height:40px;padding:4px 8px;border:1px solid #3b5870;border-radius:9px;background:#1c3a52;color:#fff;font-family:inherit;font-size:13px;font-weight:600;line-height:1.15}
+.koul-row button[aria-pressed=true]{background:#8a2a1a;border-color:#ff8a5a}
+#koulVoice button[aria-pressed=true]{background:#1f5d3a;border-color:#6fd39a}
+.koul-wide{width:100%}
+.mk-hyva{border-color:#4caf6e!important}.mk-huomio{border-color:#e0a040!important}.mk-virhe{border-color:#e05050!important}
+.koul-chk{display:flex;align-items:center;gap:6px;margin-top:6px;min-height:32px}
+.koul-log{list-style:none;margin:0;padding:0;font:12px/1.35 ui-monospace,Menlo,monospace}
+.koul-log li{padding:2px 0;border-bottom:1px solid rgba(255,255,255,.07)}
+.koul-log li span{color:#9fb3c4}
+.koul-log .dim{color:#9fb3c4}
+@media (max-width:700px){.koul-panel{top:auto;bottom:8px;max-height:60%}}
+
 /* Yömoodi (vaihe 4, 28.10.2026): valonheittimen säädin, plotterin yönäyttö (sama suodatin kuin Reittikartan yönäytössä) ja Google 3D -kuvan himmennys */
 .spot{left:8px;bottom:60px;display:flex;align-items:center;gap:8px;padding:4px 8px 4px 4px;background:rgba(14,28,40,.78)}
 .spot[hidden]{display:none}
@@ -323,3 +360,5 @@ input[type=date]{margin-top:8px;min-height:48px;font-size:18px;padding:6px 10px;
 .status .wind{font-size:11px;color:var(--muted);font-weight:500;margin-left:2px;display:inline-block;white-space:normal}
 /* nykyinen sää (live): itse valittavat sää- ja tuulinapit lukittuina */
 .wx-live #segWeather,.wx-live #segWindSpd,.wx-live .windrow{opacity:.45;pointer-events:none}
+#testBadge{border-color:#e0a040}
+#testBadge[hidden]{display:none}
