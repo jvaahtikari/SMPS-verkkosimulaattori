@@ -1,0 +1,5 @@
+# Vercel julkaisee vain verkkosivut (index.html, reittikartta.html, manifesti) ja palvelinfunktiot (api/).
+# Lähdekoodi ja dokumentaatio pysyvät GitHubissa.
+lahdekoodi
+docs
+README.md

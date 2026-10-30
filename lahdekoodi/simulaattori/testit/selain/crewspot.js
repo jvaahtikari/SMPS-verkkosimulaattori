@@ -1,0 +1,21 @@
+const { chromium } = require('playwright');
+const SIM = process.env.SIM_URL || 'http://127.0.0.1:8154/simulaattori.html', AIN = process.env.AINEISTO_URL || 'http://127.0.0.1:8144/', OUT = process.env.OUT || require('path').join(__dirname, 'kuvat'); require('fs').mkdirSync(OUT, { recursive: true });
+const URL = SIM + '?aineisto=' + AIN + '&preserve=1&maisema=oma';
+(async () => {
+  const b = await chromium.launch({ args: ['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader'] }); const c = await b.newContext({ viewport: { width: 1300, height: 650 } });
+  const A = await c.newPage(), B = await c.newPage(); const errs = [];
+  A.on('pageerror', e => errs.push('A ' + e)); B.on('pageerror', e => errs.push('B ' + e));
+  await A.goto(URL); await B.goto(URL); await A.waitForTimeout(800);
+  await A.fill('#clockIn', '22:00'); await A.dispatchEvent('#clockIn', 'input');
+  await A.click('#segCrew button[data-v="helm"]'); await A.waitForTimeout(300);
+  const code = await A.textContent('#crewCode'); await A.click('#startBtn');
+  await B.click('#segCrew button[data-v="nav"]'); await B.fill('#crewIn', code.toLowerCase()); await B.click('#crewJoin');
+  await A.waitForTimeout(11000);
+  const st = p => p.evaluate(() => ({ nappi: [...document.querySelectorAll('#spotBox button')].filter(b => !b.hidden).map(b => b.textContent), helm: __sim.valot.heitin('helm'), nav: __sim.valot.heitin('nav') }));
+  await A.evaluate(() => document.getElementById('spotBtn').click()); await A.evaluate(() => { document.getElementById('spotAim').value = '-40'; document.getElementById('spotAim').dispatchEvent(new Event('input')); });
+  await B.evaluate(() => document.getElementById('spotBtn').click()); await B.evaluate(() => { document.getElementById('spotAim').value = '25'; document.getElementById('spotAim').dispatchEvent(new Event('input')); });
+  await A.waitForTimeout(2500);
+  console.log('ruorimies', JSON.stringify(await st(A))); console.log('navigoija', JSON.stringify(await st(B)));
+  await B.screenshot({ path: OUT + '/crewspot.png' });
+  console.log(errs); await b.close();
+})();
