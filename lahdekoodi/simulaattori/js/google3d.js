@@ -299,7 +299,7 @@
    * Kartta luodaan kerran ja pidetään elossa: disable() vain piilottaa sen (display:none) ja enable() näyttää sen uudelleen ilman uutta latausta. */
   function create(host, opts) {
     opts = opts || {};
-    var box = null, map = null, active = false, ready = false, seq = 0, lastMs = 0, steadyTimer = null, lib = null, building = false;
+    var box = null, map = null, active = false, ready = false, seq = 0, lastMs = 0, steadyTimer = null, lib = null, building = false, retries = 0;
     var stats = { updates: 0, calls: 0, throttled: 0, last: null, loads: 0, shows: 0 };
 
     function status(t) { if (opts.onStatus) opts.onStatus(t); }
@@ -332,11 +332,16 @@
         try { map.maxTilt = 90; } catch (e) {}
         map.style.cssText = 'display:block;width:100%;height:100%';
         map.addEventListener('gmp-error', function (ev) { if (my === seq) { var em = ev && ((ev.error && ev.error.message) || ev.message) || ''; var nm = /([A-Za-z]+MapError)/.exec(em); fail('Google 3D -kartta ei alustunut' + (em ? ': ' + em : ' (gmp-error).'), nm ? classifyMapError(nm[1]) : (/quota|limit/i.test(em) ? 'kiintio' : 'muu')); } });
-        map.addEventListener('gmp-steadychange', function (ev) { if (my === seq && ev && ev.isSteady) { ready = true; clearTimeout(steadyTimer); if (active) status('Google 3D (testi)'); } });
+        map.addEventListener('gmp-steadychange', function (ev) { if (my === seq && ev && ev.isSteady) { ready = true; retries = 0; clearTimeout(steadyTimer); if (active) status('Google 3D (testi)'); } });
         box.appendChild(map);
         if (!active) box.style.display = 'none';
         else status('Ladataan kuvaa…');
-        steadyTimer = setTimeout(function () { if (my === seq && active && !ready) status('Google ei vastaa (25 s)'); }, SETTINGS.steadyTimeoutMs);
+        // 30.10.2026: jos ensimmäinen maisema ei valmistu, kartta luodaan kerran uudelleen (kaksinpelitestissä toinen selain jäi joskus ilman kuvaa)
+        steadyTimer = setTimeout(function () {
+          if (my !== seq || !active || ready) return;
+          if (retries < 1) { retries++; if (root.console) console.warn('[Google3D] maisema ei valmistunut ' + SETTINGS.steadyTimeoutMs / 1000 + ' s:ssa, kartta luodaan uudelleen'); destroy(); active = false; enable(); }
+          else status('Google ei vastaa (25 s)');
+        }, SETTINGS.steadyTimeoutMs);
       }).catch(function (e) {
         building = false;
         if (my === seq) { var em = (e && e.message) || ''; fail(em || 'Google 3D -näkymän lataus epäonnistui.', /gm_authFailure|avaimen/.test(em) ? 'avain' : /verkko|latautunut/.test(em) ? 'verkko' : 'muu'); }
@@ -370,7 +375,7 @@
       stats.updates++; stats.last = c;
       return c;
     }
-    return { enable: enable, disable: disable, destroy: destroy, update: update, isActive: function () { return active; }, isReady: function () { return ready; }, hasMap: function () { return !!map; }, loads: function () { return stats.loads; }, stats: function () { return stats; }, element: function () { return map; } };
+    return { enable: enable, disable: disable, destroy: destroy, update: update, isActive: function () { return active; }, isReady: function () { return ready; }, reload: function () { if (!map && !building) return; destroy(); active = false; return enable(); }, hasMap: function () { return !!map; }, loads: function () { return stats.loads; }, stats: function () { return stats; }, element: function () { return map; } };
   }
 
   var api = {

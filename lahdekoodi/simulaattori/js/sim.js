@@ -1109,7 +1109,11 @@
   // Aluksen tila Googlen kameralaskentaan: sijainti (WGS84), tosisuunta, katseen kääntö, pystykuvakulma samasta kamerasta kuin oma näkymä ja silmän korkeus (istuen tai seisten).
   function g3Params() {
     var S = G.S, v = G.view, ll = P.worldToLonLat(S.x, S.y), st = v.settings;
-    return { lat: ll.lat, lon: ll.lon, hdgTrue: L.trueHdg(S), lookDeg: v.getGazeNow(), vfovDeg: v.vfovRequested(), seated: v.isSeated(), eyeFwdM: st.eyeX - st.pivotX, eyeStbdM: st.eyeY, eyeAboveWaterM: v.camTilt && v.camTilt().eyeY ? v.camTilt().eyeY : v.eyeAboveWaterM() };   // silmän korkeus keinunnan mukaan
+    return { lat: ll.lat, lon: ll.lon, hdgTrue: L.trueHdg(S), lookDeg: v.getGazeNow(), vfovDeg: v.vfovRequested(), seated: v.isSeated(), eyeFwdM: st.eyeX - st.pivotX, eyeStbdM: st.eyeY, eyeAboveWaterM: g3Motion() && v.camTilt().eyeY ? v.camTilt().eyeY : v.eyeAboveWaterM() };   // silmän korkeus keinunnan mukaan
+  }
+  // Keinunta Google-kuvaan vasta, kun ensimmäinen maisema on valmis: liikkuva kamera estää Googlen latauksen vakiintumisen (30.10.2026).
+  // Testiä varten keinunnan voi kytkeä pois osoitteella ?g3keinunta=0.
+  function g3Motion() { return !!(G.view && G.view.camTilt && G.g3 && G.g3.isReady && G.g3.isReady() && qs.get('g3keinunta') !== '0');
   }
   // Vaihtonappi 3D-näkymän oikeassa yläkulmassa (28.10.2026): Google-tilassa tila ja "Oma näkymä", omassa tilassa "Google 3D", jotta paluu Googleen on yhtä helppo
   function g3Status(t) {
@@ -1198,8 +1202,9 @@
     G.g3.update(g3Params());
     // keinunta (pään vakautuksen jälkeen): Googlen kuva kierretään ja siirretään kuvatasossa samaan asentoon kuin oman kerroksen kamera, koska Googlen kamera
     // ei käänny horisontin yläpuolelle eikä kallistu. Suurennus peittää reunat.
-    var el = G.g3.element(), ct = G.view.camTilt ? G.view.camTilt() : null;
-    if (el && ct) {
+    var el = G.g3.element(), ct = g3Motion() ? G.view.camTilt() : null;
+    if (el && !ct) { if (el.style.transform) el.style.transform = ''; }
+    else if (el && ct) {
       var hpx = el.clientHeight || 1, ppd = hpx / Math.max(10, G.view.vfovRequested()), ty = ct.pitchDeg * ppd, r = ct.rollDeg;
       var sc = 1 + Math.min(0.35, Math.abs(r) / 45 + 2 * Math.abs(ty) / hpx);
       var tf = Math.abs(r) < 0.02 && Math.abs(ty) < 0.3 ? '' : 'translateY(' + ty.toFixed(1) + 'px) rotate(' + r.toFixed(2) + 'deg) scale(' + sc.toFixed(3) + ')';
