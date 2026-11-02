@@ -48,6 +48,11 @@ Simulaattori toimii tietokoneella, tabletilla ja puhelimella ilman asennusta ja 
 - Jetit kytketty tai vapaalla: kytkettynä nopeudella 0 ruorimies pitää aluksen paikallaan ja keulan suunnassa, vapaalla alus ajelehtii tuulen ja aallokon mukana.
 - Liukuvarungon käytös: liukukynnys, trimmi, kallistus käännöksessä, pohjakosketus ja törmäykset.
 
+**Käsittelyharjoitus (kokeiluversio, `kasittely.html`)**
+
+- Pelaaja on itse ruorimies ja ohjaa Repan Vectorstick-järjestelmää: TILLER kääntää keulaa, JOYSTICK on TRANSIT-tilassa kaasu ja DOCKING-tilassa liikuttaa alusta eteen, taakse ja sivuttain. Rolls-Roycen paneelit (CLUTCH, TRIM–ROLL, BACKUP, ENGINE BACKUP) ja LCD-näyttö (TAB, BUCKET, NOZZLE) ovat mukana.
+- Kolmen vapausasteen voimamalli (`kasittely.js`): jettien työntövektorit (kauha, suutin, kierrosluku), rungon poikkivirtausvastus, tuuli ja kelluvan ponttonin fenderikosketus. Näkymä ylhäältä, kosketukset kirjataan purkua varten. Malli on kalibroimaton, kunnes se on ajettu oikealla veneellä.
+
 **Sää, valo ja meri**
 
 - Kello ohjaa auringon, hämärän ja yön. Yöllä loistot palavat valotunnustensa ja sektoriensa mukaan, plotteri vaihtuu yönäyttöön ja käytössä on kaksi valonheitintä (navigoijan ja ruorimiehen yläpuolella). Viittojen ja poijujen heijastimet välähtävät keilassa.
@@ -115,6 +120,7 @@ Reittikartan oma kuvaus on tiedostossa [docs/REITTIKARTTA.md](docs/REITTIKARTTA.
 ## Mallit lyhyesti
 
 - **Liikemalli** (`liike.js`): voimamalli työnnöstä ja vastuskäyrästä, jossa on liukukynnys (huippu noin 12 kn, liuku noin 17 kn). Huippunopeus 35 kn, matkanopeus 28 kn, crash stop 28 kn:sta noin 40 m. Kääntösäde nopeuden mukaan, paikallaan kääntyminen 10 °/s. Simuloitu ruorimies pitää käsketyn nopeuden noin 0,3 kn:n tarkkuudella, mutta liukukynnyksellä (käsky noin 14–16 kn) vene hakee ±2–3 kn, kuten oikeassa veneessä.
+- **Käsittelymalli** (`kasittely.js`): kolmen vapausasteen malli (surge, sway, yaw) hitaaseen ajoon. Runko on jaettu kaistoihin, joiden poikkivirtausvastus antaa sway-vastuksen, kääntövaimennuksen ja niiden kytkennän (vedenalaisen sivupinnan keskiö on painopisteen edessä), vauhdissa lisäksi lineaariset derivaatat (Clarke 1983). Jetit: työntö 15 kN kappale paaluvedossa, kauha neutraalista täyteen sekunnissa, peruutus 60 % paikallaan ja kasvaa vauhdissa (crash stop 28 kn:sta 39 m), suutin ±30° ja ohjausvoima myös neutraalilla kauhalla. DOCKING-tilassa jakaja ratkaisee kauhat ja suuttimet joystickin voimasta ja tillerin momentista. Täysi tiller paikallaan noin 8 °/s, sivuttaissiirto noin 1 kn. Hydrostatiikka runkomallista (14,2 t, LCB 3,78 m peräpeilistä).
 - **Tuuli** (`liike.js`): näennäinen tuuli, tuulen voima sivu- ja keulaprofiilille, sorto veden sivuvastusta ja vauhdin mukana kasvavaa nostovoimaa vastaan, kääntövaikutus. Esimerkiksi 10 m/s sivutuulessa jetit vapaalla noin 1,2 kn ajelehtiminen, 20 kn ajossa sorron kulma alle 1°.
 - **Aallokko** (`aallot.js`): JONSWAP-kaavat tuulen nopeudesta ja pyyhkäisymatkasta (maastomallista tuulen suuntaisena ruudukkona). Merenkäynti on 16 aallon summa, ja aluksen nousu, nyökkäys ja kallistus ovat jousi-vaimenninvasteita, jotka vaihtuvat uppoumasta liukuun. Liu'ussa iso vasta-aallokko heittää rungon ilmaan.
 - **Tutka** (`tutka.js`): säteet marssitaan maa- ja korkeusruudukossa, näkölinja ja varjot, kaiun voimakkuus rinteen ja materiaalin mukaan, merivälke, sade ja häiriöt. Tarkempi kuvaus: [docs/TUTKA.md](docs/TUTKA.md).
@@ -126,6 +132,7 @@ Reittikartan oma kuvaus on tiedostossa [docs/REITTIKARTTA.md](docs/REITTIKARTTA.
 |---|---|
 | `index.html` | Simulaattori yhtenä tiedostona (tuotettu, `lahdekoodi/build.py`) |
 | `reittikartta.html` | Reittikartta yhtenä tiedostona (tuotettu) |
+| `kasittely.html` | Käsittelyharjoitus yhtenä tiedostona (tuotettu `lahdekoodi/kasittely.html`:stä) |
 | `simulaattori.webmanifest` | Kotivalikkoon lisätyn sivun asetukset |
 | `api/` | Vercelin palvelinfunktiot: `google.js` (Google-avain), `simu.js` (miehistötilan Supabase-avain), `mml.js` (Maanmittauslaitoksen välityspalvelu Reittikartalle) |
 | `lahdekoodi/simulaattori.html` | Simulaattorin lähdesivu |
@@ -157,6 +164,7 @@ Simulaattorin moduulit:
 | `puhe.js` | Miehistötilan puheyhteys (WebRTC) |
 | `aineisto.js`, `mvt.js`, `paikka.js` | Aineistopaketin luku (PMTiles, MVT, Terrain-RGB) ja koordinaatit |
 | `runko.js` | Repan runkomalli |
+| `kasittely.js`, `kasittelysivu.js` | Käsittelyharjoituksen liikemalli (Vectorstick, jetit, kosketus) ja sen 2D-sivu |
 
 ## Julkaisu
 
@@ -213,7 +221,7 @@ Yksikkötestit (Node, ei riippuvuuksia):
 for t in lahdekoodi/simulaattori/testit/*_test.js; do node "$t"; done
 ```
 
-Liike-, tuuli-, aalto-, peruutus-, harjoitus- ja Google-kameran testit toimivat ilman verkkoa. `mvt`, `sillat3d`, `tormays` ja `veneet3o` lukevat aineistopakettia verkosta.
+Liike-, tuuli-, aalto-, peruutus-, käsittely-, harjoitus- ja Google-kameran testit toimivat ilman verkkoa. `mvt`, `sillat3d`, `tormays` ja `veneet3o` lukevat aineistopakettia verkosta.
 
 Kokeiltavat muutokset voi viedä haaraan `testi`, joka julkaistaan Vercelin haaraosoitteeseen (`<projekti>-git-testi-<tili>.vercel.app`): `vercel.json` rakentaa haarat `main` ja `testi`. Haaraosoitteessa aloitusnäytöllä näkyy merkintä Testiversio.
 

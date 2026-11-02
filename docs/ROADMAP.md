@@ -8,6 +8,14 @@ Suunnitellut, mutta vielä toteuttamattomat asiat. Valmiit ominaisuudet on kuvat
 - **Kouluttajan jatko:** tehtävän anto kartalta (kohde navigoijalle), automaattiset hälytykset kouluttajalle (matalikko edessä, poikkeama reitiltä), ajastetut skenaariot, puheen tallenne purkuun (suostumuksella, vain kouluttajan laitteella), moottorin melu puheen taustalle.
 - **Muut viat:** esimerkiksi toisen jetin menetys, ohjausvika tai GPS-katko liikemalliin ja plotteriin.
 
+## Käsittelyharjoitus
+
+- **Vaihe K1 (2.11.2026, kokeiluversio):** kolmen vapausasteen käsittelymalli (`kasittely.js`), Vectorstick TRANSIT ja DOCKING, Rolls-Roycen paneelit, kelluva ponttoni ja 2D-sivu (`kasittely.html`). Kalibroimaton.
+- **K2, 3D-näkymä:** käsittelyharjoitus `sim.js`:n ja `nakyma.js`:n sisälle: ruorimiehen silmäpiste, kelluva ponttoni Naistenlahden asemalla laituriaineiston kohdalle, ohjaimet ja LCD-paneeli näkymän päälle, purku (kosketukset ja niiden nopeudet).
+- **K3, ympäristö:** tuuli ja virtaus harjoitukseen säätiedosta, kiinteä laituri ja sen virtaus, köydet ja kiinnitys, lähtö laiturista.
+- **K4, kouluttaja ja kalibrointi:** toisen jetin menetys ja BACKUP-ohjaus häiriöinä, kalibrointiajo oikealla veneellä (tyhjäkäyntinopeus, pysähtyminen kauhalla, kääntö paikallaan, sivuttaissiirto, ajelehtiminen, kääntöympyrät).
+- **Avoimet oletukset:** tillerin ja joystickin jousipalautus, DOCKING-tilan kierrosrajoitus ja jakologiikka, suuttimen ohjausvoiman suunta peruutuksessa, suuttimen enimmäiskulma, peruutustyönnön osuus.
+
 ## Sää ja näkyvyys
 
 - **Sumu omassa näkymässä:** näkyvyysasetus toimii nyt vain Google 3D -kerroksen päällä. Sama sumu omaan maisemaan, valoihin ja tutkan kuvaan.
