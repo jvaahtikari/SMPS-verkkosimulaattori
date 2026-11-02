@@ -513,8 +513,9 @@
     }
     function brgText(b) { b = ((b % 360) + 360) % 360; var t = String(Math.round(b) % 360); while (t.length < 3) t = '0' + t; return t + '°'; }
     function nmText(m) { var nm = m / 1852; return (nm < 10 ? nm.toFixed(2) : nm.toFixed(1)).replace('.', ',') + ' mpk'; }
-    // Sivuutus- ja käännösetäisyydet Reittikartan tapaan (routes.js): sininen katkoviiva legiltä kohteeseen, poikkiviiva kohteessa ja lukema kaapeleina
-    // valkoisessa laatikossa Reittikartassa valittuun paikkaan; käännösetäisyys violettina pisteviivana reittipisteestä kohteeseen, lukema keskellä.
+    // Sivuutus- ja käännösetäisyydet Reittikartan tapaan (routes.js): sininen katkoviiva legiltä kohteeseen ja poikkiviiva kohteessa. Lukema SARNavin tapaan
+    // (2.11.2026) mustassa pallossa valkoisena kaapelin kymmenyksinä ilman pilkkua (28 = 2,8 kaapelia) Reittikartassa valittuun paikkaan.
+    // Käännösetäisyys violettina pisteviivana reittipisteestä kohteeseen, lukema keskellä (ei piirretä).
     function kblText(m) { return (m / 185.2).toFixed(1).replace('.', ',') + ' kbl'; }
     function labelBox(text, x, y, col) {
       ctx.font = '700 12px ' + FONT; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
@@ -522,20 +523,28 @@
       ctx.fillStyle = '#fff'; ctx.fillRect(x - tw / 2, y - 9, tw, 18); ctx.strokeStyle = col; ctx.lineWidth = 1.5; ctx.setLineDash([]); ctx.strokeRect(x - tw / 2, y - 9, tw, 18);
       ctx.fillStyle = col; ctx.fillText(text, x, y + 0.5);
     }
+    function passText(m) { return String(Math.round(m / 18.52)); }   // kaapelin kymmenykset: 2,8 kbl = 28
+    function passBallR(text) { ctx.font = '700 12px ' + FONT; return Math.max(11, ctx.measureText(text).width / 2 + 5); }
+    function passBall(text, x, y) {
+      var r = passBallR(text);
+      ctx.setLineDash([]); ctx.beginPath(); ctx.arc(x, y, r, 0, 2 * Math.PI); ctx.fillStyle = '#000'; ctx.fill();
+      ctx.lineWidth = 1.2; ctx.strokeStyle = '#fff'; ctx.stroke();
+      ctx.font = '700 12px ' + FONT; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#fff'; ctx.fillText(text, x, y + 0.5);
+    }
     function drawPasses() {
       var vis = function (a, b) { return Math.max(a[0], b[0]) > -40 && Math.min(a[0], b[0]) < w + 40 && Math.max(a[1], b[1]) > -40 && Math.min(a[1], b[1]) < h + 40; };
       (route.passes || []).forEach(function (p) {
         var F = toScreen(p.foot[0], p.foot[1]), T = toScreen(p.tgt[0], p.tgt[1]), Lb = toScreen(p.lab[0], p.lab[1]);
         if (!vis(F, T) && !vis(Lb, Lb)) return;
-        var col = '#0b4f7a', dx = T[0] - F[0], dy = T[1] - F[1], l = Math.hypot(dx, dy) || 1, txt = kblText(p.dist);
+        var col = '#0b4f7a', dx = T[0] - F[0], dy = T[1] - F[1], l = Math.hypot(dx, dy) || 1, txt = passText(p.dist);
         // Katkoviiva legiltä sivuutettavaan kohteeseen pysyy aina näkyvissä: jos lukema osuisi viivan päälle, lukema siirretään kohteen taakse viivan jatkeelle
-        ctx.font = '700 12px ' + FONT; var hw2 = (ctx.measureText(txt).width + 10) / 2, hh2 = 9, hit = false;
+        var hw2 = passBallR(txt), hh2 = hw2, hit = false;
         for (var k = 0; k <= 12 && !hit; k++) { var qx = F[0] + dx * k / 12, qy = F[1] + dy * k / 12; hit = Math.abs(qx - Lb[0]) < hw2 + 2 && Math.abs(qy - Lb[1]) < hh2 + 2; }
         if (hit) { var ux = dx / l, uy = dy / l, ext = Math.abs(ux) * hw2 + Math.abs(uy) * hh2 + 10; Lb = [T[0] + ux * ext, T[1] + uy * ext]; }
         ctx.strokeStyle = col; ctx.lineWidth = 2.2; ctx.setLineDash([6, 4]); ctx.beginPath(); ctx.moveTo(F[0], F[1]); ctx.lineTo(T[0], T[1]); ctx.stroke(); ctx.setLineDash([]);
         ctx.beginPath(); ctx.moveTo(T[0] - dy / l * 7, T[1] + dx / l * 7); ctx.lineTo(T[0] + dy / l * 7, T[1] - dx / l * 7); ctx.stroke();
         ctx.beginPath(); ctx.arc(T[0], T[1], 3.5, 0, 2 * Math.PI); ctx.fillStyle = '#fff'; ctx.fill(); ctx.lineWidth = 1.8; ctx.stroke();
-        labelBox(txt, Lb[0], Lb[1], col);
+        passBall(txt, Lb[0], Lb[1]);
       });
       // Käännösetäisyyksiä ei piirretä (käyttäjä 28.10.2026: ei SARNavissa)
       if (false) (route.rkTurns || []).forEach(function (t) {
