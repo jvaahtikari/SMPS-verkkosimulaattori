@@ -5,6 +5,8 @@ Selaimessa toimiva navigointisimulaattori meripelastajien koulutukseen. Harjoitu
 Simulaattori toimii tietokoneella, tabletilla ja puhelimella ilman asennusta ja tunnuksia.
 
 > **Uutta 2.11.2026: kouluttaja ja puheyhteys.** Miehistötilaan voi liittyä kolmantena laitteena kouluttaja, joka seuraa ajoa, käynnistää tutkan ja plotterin häiriöitä, tekee merkintöjä purkuun ja pitää tauon kaikille. Miehistö ja kouluttaja puhuvat keskenään selaimen kautta, ja kaikilla on radiolähetys (VHF). Ominaisuudet ovat uusia, eikä niitä ole vielä kokeiltu laajasti oikeilla laitteilla ja verkoilla. Kuvaus: [Miehistötila](#mitä-simulaattorissa-voi-tehdä). Palaute ja havainnot ovat tervetulleita.
+>
+> **Muut muutokset 2.11.2026:** plotteri ja tutka ovat oletuksena päällä, sivuutusetäisyys näkyy SARNavin tapaan mustassa pallossa (28 = 2,8 kaapelia), aallokko näyttää kovalla tuulella luonnollisemmalta, ruorimies pitää käsketyn nopeuden ilman ylitystä (liukukynnyksellä vene hakee tarkoituksella), Googlen logo pysyy näkyvissä keinunnassa, ja miehistötilan purussa luvut ovat samat kaikilla laitteilla.
 
 **Ei navigointikäyttöön.** Kartta- ja maastoaineistot ovat avointa dataa, joka ei täytä merikartan vaatimuksia.
 
@@ -37,7 +39,7 @@ Simulaattori toimii tietokoneella, tabletilla ja puhelimella ilman asennusta ja 
 
 - 3D-näkymä ohjaamosta navigoijan (vasen) tai ruorimiehen (oikea) paikalta. Maasto, rakennukset, metsä, laiturit, sillat, maamerkit, turvalaitteet ja ilmakuvasta tunnistetut kiinnitetyt veneet. Katse kääntyy sivuille, ja mukana on 7x50-kiikari.
 - Valinnainen Google 3D -maisema (fotorealistinen), jonka päälle piirretään oma vesi, vene ja merkit. Hämärässä ja yöllä käytetään omaa maisemaa, koska Googlen kuva on päivänvalokuva.
-- Plotteri SARNavin tapaan: tietopalsta (HDG, SOG, COG, sijainti, kello), harppi, suuntima (EBL/VRM, lukittava), vektori, sivuutukset ja suuntanuotit, yönäyttö.
+- Plotteri SARNavin tapaan: tietopalsta (HDG, SOG, COG, sijainti, kello), harppi, suuntima (EBL/VRM, lukittava), vektori, sivuutukset (musta pallo, luku kaapelin kymmenyksinä) ja suuntanuotit, yönäyttö.
 - Tutka: kaikumalli maastosta, rakennuksista, puustosta, laitureista, silloista, turvalaitteista ja veneistä. RANGE, EBL ja VRM, offset, suunta ylös tai pohjoinen ylös, jälki, sadesuodatin, SEA-säätö (merivälkkeen vaimennus) ja viritys.
 
 **Ohjaus ja liikemalli**
@@ -112,7 +114,7 @@ Reittikartan oma kuvaus on tiedostossa [docs/REITTIKARTTA.md](docs/REITTIKARTTA.
 
 ## Mallit lyhyesti
 
-- **Liikemalli** (`liike.js`): voimamalli työnnöstä ja vastuskäyrästä, jossa on liukukynnys (huippu noin 12 kn, liuku noin 17 kn). Huippunopeus 35 kn, matkanopeus 28 kn, crash stop 28 kn:sta noin 40 m. Kääntösäde nopeuden mukaan, paikallaan kääntyminen 10 °/s.
+- **Liikemalli** (`liike.js`): voimamalli työnnöstä ja vastuskäyrästä, jossa on liukukynnys (huippu noin 12 kn, liuku noin 17 kn). Huippunopeus 35 kn, matkanopeus 28 kn, crash stop 28 kn:sta noin 40 m. Kääntösäde nopeuden mukaan, paikallaan kääntyminen 10 °/s. Simuloitu ruorimies pitää käsketyn nopeuden noin 0,3 kn:n tarkkuudella, mutta liukukynnyksellä (käsky noin 14–16 kn) vene hakee ±2–3 kn, kuten oikeassa veneessä.
 - **Tuuli** (`liike.js`): näennäinen tuuli, tuulen voima sivu- ja keulaprofiilille, sorto veden sivuvastusta ja vauhdin mukana kasvavaa nostovoimaa vastaan, kääntövaikutus. Esimerkiksi 10 m/s sivutuulessa jetit vapaalla noin 1,2 kn ajelehtiminen, 20 kn ajossa sorron kulma alle 1°.
 - **Aallokko** (`aallot.js`): JONSWAP-kaavat tuulen nopeudesta ja pyyhkäisymatkasta (maastomallista tuulen suuntaisena ruudukkona). Merenkäynti on 16 aallon summa, ja aluksen nousu, nyökkäys ja kallistus ovat jousi-vaimenninvasteita, jotka vaihtuvat uppoumasta liukuun. Liu'ussa iso vasta-aallokko heittää rungon ilmaan.
 - **Tutka** (`tutka.js`): säteet marssitaan maa- ja korkeusruudukossa, näkölinja ja varjot, kaiun voimakkuus rinteen ja materiaalin mukaan, merivälke, sade ja häiriöt. Tarkempi kuvaus: [docs/TUTKA.md](docs/TUTKA.md).
