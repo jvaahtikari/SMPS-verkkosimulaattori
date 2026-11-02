@@ -54,11 +54,13 @@ function nopeusKoe(kn, sek, alku) {
     const vaihtelu = Math.max(...loppu) - Math.min(...loppu);
     ehto('nopeuskäsky ' + kn + ' kn: vaihtelu viimeisten 10 s aikana alle 1 kn', vaihtelu < 1, vaihtelu.toFixed(2) + ' kn');
   }
-  // 2.11.2026: ruorimiehen säätö pitää myös 15 ja 16 kn liukukynnyksellä (aiemmin vene haki, ja käsky ylittyi 30-40 %)
-  for (const [kn, hakee] of [[10, false], [12, false], [15, false], [16, false], [18, false]]) {
+  // 2.11.2026: liukukynnyksellä (15 ja 16 kn) vene hakee tarkoituksella, muilla nopeuksilla nopeus pysyy ilman ylitystä
+  for (const [kn, hakee] of [[10, false], [12, false], [15, true], [16, true], [18, false]]) {
     const k = nopeusKoe(kn, 300), loppu = k.lo.slice(-3000), min = Math.min(...loppu), max = Math.max(...loppu);
     ehto('nopeuskäsky ' + kn + ' kn (liukukynnys): viimeisten 60 s vaihteluväli ' + min.toFixed(1) + ' ... ' + max.toFixed(1) + ' kn', hakee ? (max - min) > 2 : (max - min) < 1, hakee ? 'vene hakee' : 'pysyy');
   }
+  for (const kn of [12, 20]) { const r = nopeusKoe(kn, 90); ehto('nopeuskäsky ' + kn + ' kn: ylitys alle 1 kn', Math.max(...r.lo) - kn < 1, Math.max(...r.lo).toFixed(1) + ' kn'); }
+  for (const kn of [15, 16]) { const r = nopeusKoe(kn, 20), m = Math.max(...r.lo); ehto('nopeuskäsky ' + kn + ' kn: ei alun ylitystä (hakeminen alkaa vasta tavoitteessa), 20 s huippu alle ' + (kn + 1) + ' kn', m < kn + 1, m.toFixed(1) + ' kn'); }
   const alas = nopeusKoe(10, 90, 28);
   ehto('liu\'usta 28 kn nopeuskäsky 10 kn: asettuu uppoumanopeuteen', Math.abs(alas.s.v / KN - 10) < 1.2, (alas.s.v / KN).toFixed(1) + ' kn');
   const peru = nopeusKoe(-4, 60); ehto('peruutus 4 kn: nopeus noin -4 kn', Math.abs(peru.s.v / KN + 4) < 0.3, (peru.s.v / KN).toFixed(2) + ' kn');

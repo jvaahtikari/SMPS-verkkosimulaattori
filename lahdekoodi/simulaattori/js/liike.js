@@ -76,6 +76,8 @@
     leverGuessPerKn: 1 / 35,              // (ei enää käytössä 2.11.2026: ensiarvaus on vipu, jolla käsketty nopeus pysyy, leverForSpeed)
     leverRatePerSec: 0.3,                 // vivun liikuttamisnopeus (osuutta koko liikkeestä sekunnissa)
     speedSenseLagSec: 1.0,                // ruorimiehen nopeuden havainnon seuranta (2,5 s aiheutti ylitystä)
+    humpHuntLoKn: 13.5, humpHuntHiKn: 17.5,   // liukukynnysalue: käsky tällä välillä, ruorimies säätää kuten ennen (hidas havainto 2,5 s, integraattori aina), jolloin vene hakee
+    humpSenseLagSec: 2.5, humpKpPerKn: 0.04,
     radiusLowKn: 5, radiusLowM: 12,       // kääntösäde 5 kn:ssa (oletus)
     radiusHighKn: 30, radiusHighM: 70,    // kääntösäde 30 kn:ssa (oletus)
     turnStaticDegPerSec: 10,   // kääntyminen paikallaan täydellä ruorilla (oletus, tilaajan tarkennus, kalibroidaan oikealla veneellä)
@@ -212,7 +214,7 @@
     }
     if (!s.engaged && o.kind !== 'gentle') s.engaged = true;   // käsky kytkee jetit
     if (o.kind === 'heading') { s.hmHdg = o.value; s.hmGentle = !!o.gentle; }
-    else if (o.kind === 'speed') { s.hmSpeedKn = o.value; s.leverTrim = leverForSpeed(o.value * KN); }
+    else if (o.kind === 'speed') { s.hmSpeedKn = o.value; s.hmHunt = false; s.leverTrim = leverForSpeed(o.value * KN); }
     else if (o.kind === 'stern') { s.hmStern = o.value; }
     else if (o.kind === 'straight') {                  // Suoraan: ruorimies pitää suunnan, jossa alus on (ruorin vaimennus huomioiden)
       s.hmStern = null; s.hmGentle = false;
@@ -314,10 +316,14 @@
   // 2.11.2026 (testiraportti: 12 kn:n käsky nousi 16,8 kn:iin): ensiarvaus on vipu, jolla käsketty nopeus pysyy (ei lineaarinen arvaus, joka liukukynnyksen
   // takia kasvatti integraattoria liikaa), integraattori kerää vain lähellä tavoitetta, ja hidastettaessa ruorimies vetää vipua reilummin. Ylitys enintään noin 0,3 kn.
   function helmLever(s, dt) {
-    var S = SETTINGS, vt = s.hmSpeedKn;
-    s.speedSense += (s.v / KN - s.speedSense) * (1 - Math.exp(-dt / S.speedSenseLagSec));
+    var S = SETTINGS, vt = s.hmSpeedKn, zone = vt > S.humpHuntLoKn && vt < S.humpHuntHiKn;
+    if (!zone) s.hmHunt = false; else if (!s.hmHunt && Math.abs(vt - s.v / KN) < 1) s.hmHunt = true;   // hakeminen alkaa vasta, kun nopeus on ensin saavutettu (ei alun ylitystä)
+    var hunt = zone && s.hmHunt;
+    s.speedSense += (s.v / KN - s.speedSense) * (1 - Math.exp(-dt / (hunt ? S.humpSenseLagSec : S.speedSenseLagSec)));
     if (vt === 0) { s.leverTrim = 0; return 0; }
     var err = vt - s.speedSense;
+    // liukukynnysalueella vene hakee tarkoituksella (koulutuksessa tärkeä: nopeutta ei voi pitää liukukynnyksellä)
+    if (hunt) { s.leverTrim = clamp(s.leverTrim + S.leverKiPerKnSec * err * dt, -1, 1); return clamp(s.leverTrim + S.humpKpPerKn * err, -1, 1); }
     if (Math.abs(err) < 2) s.leverTrim = clamp(s.leverTrim + S.leverKiPerKnSec * err * dt, -1, 1);
     return clamp(s.leverTrim + S.leverKpPerKn * err * (err < 0 ? 2.5 : 1), -1, 1);
   }
