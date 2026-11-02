@@ -463,9 +463,9 @@ input[type=date]{margin-top:8px;min-height:48px;font-size:18px;padding:6px 10px;
     <div class="field" role="group" aria-labelledby="lblDisp">
       <div class="lbl" id="lblDisp">Näytöt</div>
       <div class="seg" id="segDisp">
-        <button type="button" data-v="plot" class="on">Plotteri</button>
+        <button type="button" data-v="plot">Plotteri</button>
         <button type="button" data-v="radar">Tutka</button>
-        <button type="button" data-v="both">Molemmat</button>
+        <button type="button" data-v="both" class="on">Molemmat</button>
       </div>
       <div class="hint" id="dispHint"></div>
     </div>
@@ -14328,7 +14328,7 @@ function shade(col, f) { return [Math.min(1, col[0] * f), Math.min(1, col[1] * f
     speedSteps: [1, 2, 5, 10], speedIdx: 0, seated: false, ground: null, lastConvT: -1e9, loadedLandmarks: false, ready: false,
     layout: { land: false, wide: false, tri: false, tp: false }, fwKnown: 0, lastPohjaT: 0, endTimer: null, dbPl: null, finishedAt: null,
     // mittarit: disp = aloitusvalinta (plot, radar, both), instr = näytettävä mittari (plot, radar, both = kolme ruutua)
-    disp: 'plot', instr: 'plot', plotShown: true, radar: null, radarOpt: null, radarOn: true, radarShown: false, radarMain: false, radarReady: true,
+    disp: 'both', instr: 'plot', plotShown: true, radar: null, radarOpt: null, radarOn: true, radarShown: false, radarMain: false, radarReady: true,
     collision: null, collMs: { n: 0, sum: 0, max: 0 }, lastTorE: 1e9, lastTorN: 1e9,
     boats: null, boatsOn: true, boatGen: 0, boatBusy: 0, boatInit: true, boatStats: null, lastBoatLoad: { x: 1e9, y: 1e9 },
     lastRadarT: 0, radarSec: 0, radarMainSec: 0, northUp: false, raster: false, radarTune: 'hyva', vecIdx: 1, fovDeg: 100, evOn: true, lastTapT: 0, gfx: null,
