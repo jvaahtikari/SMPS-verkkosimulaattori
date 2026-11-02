@@ -222,11 +222,33 @@
     }
   }
 
-  // Nopeusvektori: sininen viiva painopisteestä, 10 s:n ennuste SOG:lla
+  // Nopeusvektori: sininen käyrä painopisteestä, 10 s:n ennuste nykyisillä nopeuksilla u, v ja r (kaartuu käännöksessä, pituus = SOG x 10 s).
+  // Lisäksi ohut valkoinen keulaviiva, josta sorron eli COG:n ja keulasuunnan eron näkee. Nuolenpää on käyrän lopussa, viimeisen pätkän suuntaan.
   function piirraNopeus() {
-    var v = K.sog(s), c = K.cogTrue(s) * RAD, L = v * ENNUSTE_S;
+    var k = nakyma.k, sog = K.sog(s), L = sog * ENNUSTE_S;
+    // keulaviiva (pituus kuten vektori, vähintään 8 m)
+    var hl = Math.max(8, L), h0 = s.hdg * RAD;
+    cx.strokeStyle = 'rgba(255,255,255,.55)'; cx.lineWidth = Math.max(0.06, 1.2 / k); cx.setLineDash([0.8, 0.6]);
+    cx.beginPath(); cx.moveTo(s.x, s.y); cx.lineTo(s.x + Math.sin(h0) * hl, s.y + Math.cos(h0) * hl); cx.stroke(); cx.setLineDash([]);
     if (L < 0.2) return;
-    nuoli(s.x, s.y, s.x + Math.sin(c) * L, s.y + Math.cos(c) * L, '#2f8bff', 2.6, 9);
+    var n = 20, dt = ENNUSTE_S / n, x = s.x, y = s.y, psi = h0, r = s.rate * RAD, u = s.v, w = s.vs, ce = s.currentE || 0, cn = s.currentN || 0, px, py, i;
+    cx.strokeStyle = '#2f8bff'; cx.fillStyle = '#2f8bff'; cx.lineWidth = Math.max(0.08, 2.6 / k); cx.lineCap = 'round'; cx.lineJoin = 'round';
+    cx.beginPath(); cx.moveTo(x, y);
+    for (i = 0; i < n; i++) {
+      var pm = psi + 0.5 * r * dt;
+      px = x; py = y;
+      x += (u * Math.sin(pm) + w * Math.cos(pm) + ce) * dt;
+      y += (u * Math.cos(pm) - w * Math.sin(pm) + cn) * dt;
+      psi += r * dt;
+      cx.lineTo(x, y);
+    }
+    cx.stroke();
+    // nuolenpää viimeisen pätkän suuntaan, koko pikseleinä
+    var dx = x - px, dy = y - py, dl = Math.hypot(dx, dy) || 1, ux = dx / dl, uy = dy / dl, ph = Math.min(9 / k, L * 0.6);
+    cx.beginPath(); cx.moveTo(x + ux * ph * 0.3, y + uy * ph * 0.3);
+    cx.lineTo(x - ux * ph * 0.7 - uy * ph * 0.5, y - uy * ph * 0.7 + ux * ph * 0.5);
+    cx.lineTo(x - ux * ph * 0.7 + uy * ph * 0.5, y - uy * ph * 0.7 - ux * ph * 0.5);
+    cx.closePath(); cx.fill();
   }
 
   function piirraKompassi() {

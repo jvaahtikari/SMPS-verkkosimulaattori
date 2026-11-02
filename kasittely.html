@@ -478,9 +478,9 @@ details[open]>summary::after{transform:rotate(-135deg)}
 
       <section id="ohje" aria-label="Ohje">
         <h2>Ohje</h2>
-        <p>Näppäimillä Q ja E käännetään tilleriä vasemmalle ja oikealle niin kauan kuin näppäin on pohjassa, ja S palauttaa tillerin keskelle. Nuoli ylös ja alas liikuttavat joystickia eteen ja taakse, vasen ja oikea nuoli sivuttain (vain DOCKING-tilassa), ja X palauttaa joystickin keskelle. D vaihtaa joystickin tilaa TRANSIT ja DOCKING välillä, välilyönti on CRASH STOP, P on tauko, R nollaa tilanteen ja 1, 2 ja 5 valitsevat aikakertoimen. Kaikki toiminnot löytyvät myös napeista.</p>
+        <p>Näppäimillä Q ja E käännetään tilleriä vasemmalle ja oikealle niin kauan kuin näppäin on pohjassa, ja S palauttaa tillerin keskelle. Nuoli ylös ja alas liikuttavat joystickia eteen ja taakse, vasen ja oikea nuoli sivuttain (vain DOCKING-tilassa), ja X palauttaa joystickin keskelle. Keskiasennossa on pykälä: kun ohjain tuodaan vastakkaisella näppäimellä keskelle, se pysähtyy nollaan, ja keskiasennon yli jatketaan painamalla näppäintä uudestaan. D vaihtaa joystickin tilaa TRANSIT ja DOCKING välillä, välilyönti on CRASH STOP, P on tauko, R nollaa tilanteen ja 1, 2 ja 5 valitsevat aikakertoimen. Kaikki toiminnot löytyvät myös napeista.</p>
         <p>DOCKING-tilassa joystick liikuttaa alusta eteen, taakse ja sivuttain, ja tiller kääntää keulaa. TRANSIT-tilassa joystick on kaasu, jolloin ensin kauha (reversing bucket) kääntyy ja sitten kierrosluku nousee, ja tiller toimii kuin ruori eli kääntää molempia ohjaussuuttimia (steering nozzle). Kuvaus noudattaa käsikirjan lukua 9.4.</p>
-        <p>Näkymän ruudukko on 5 m. Sininen viiva on pohjanopeuden (SOG) mukainen 10 sekunnin ennuste, ja vihreä tai punainen nuoli perässä on jetin työntö eteen tai taakse (15 kN vastaa 2,5 metriä). Punainen reunus rungon ympärillä tarkoittaa kosketusta ponttoniin. Liikemalli on kalibroimaton arvio.</p>
+        <p>Näkymän ruudukko on 5 m. Sininen käyrä on 10 sekunnin ennuste nykyisillä nopeuksilla (pohjanopeus, sorto ja kääntymisnopeus), joten se kaartuu käännöksessä, ja valkoinen katkoviiva on keulaviiva, josta sorron näkee. Vihreä tai punainen nuoli perässä on jetin työntö eteen tai taakse (15 kN vastaa 2,5 metriä). Punainen reunus rungon ympärillä tarkoittaa kosketusta ponttoniin. Liikemalli on kalibroimaton arvio.</p>
       </section>
 
     </section>
@@ -717,19 +717,30 @@ details[open]>summary::after{transform:rotate(-135deg)}
     s.crashCmd = true; s.joyY = -1; s.joyX = 0; logCmd(s, 'crash', 1);
     return true;
   }
+  // Näppäimen liike yhdellä akselilla, keskiasennossa pykälä (detent): kun ohjain tulee näppäimellä keskelle, se pysähtyy nollaan,
+  // ja keskiasennon yli jatkaminen vaatii näppäimen vapautuksen ja uuden painalluksen. Näin ohjaimen saa näppäimillä tarkasti nollaan.
+  // st on akselin painallustila { dir, start } (näppäimen suunta ja ohjaimen puoli painalluksen alussa).
+  function keyAxis(value, dir, rate, dt, st) {
+    if (!dir) { st.dir = 0; return value; }
+    if (st.dir !== dir) { st.dir = dir; st.start = value > 0 ? 1 : value < 0 ? -1 : 0; }
+    if (st.start * dir < 0 && value * st.start <= 0) return 0;   // keskellä: pysyy nollassa saman painalluksen ajan
+    var nv = clamp(value + dir * rate * dt, -1, 1);
+    if (st.start * dir < 0 && nv * st.start <= 0) return 0;      // ylitti keskiasennon tällä askeleella: pysähtyy nollaan
+    return nv;
+  }
   // Näppäinten vaikutus ohjaimiin (pidä pohjassa): tiller ja joystick liikkuvat rajoitetulla nopeudella ja jäävät asentoonsa
   function applyKeys(s, dt) {
-    var S = SETTINGS, k = s.keys;
+    var S = SETTINGS, k = s.keys, st = s.keyState || (s.keyState = { t: {}, x: {}, y: {} });
     var td = (k.tillerR ? 1 : 0) - (k.tillerL ? 1 : 0);
-    if (td) s.tiller = clamp(s.tiller + td * S.tillerRatePerSec * dt, -1, 1);
-    else if (S.tillerSpring) s.tiller -= clamp(s.tiller, -S.tillerRatePerSec * dt, S.tillerRatePerSec * dt);
+    if (td) s.tiller = keyAxis(s.tiller, td, S.tillerRatePerSec, dt, st.t);
+    else { st.t.dir = 0; if (S.tillerSpring) s.tiller -= clamp(s.tiller, -S.tillerRatePerSec * dt, S.tillerRatePerSec * dt); }
     var yd = (k.fwd ? 1 : 0) - (k.aft ? 1 : 0), xd = (k.right ? 1 : 0) - (k.left ? 1 : 0);
-    if (yd) s.joyY = clamp(s.joyY + yd * S.joystickRatePerSec * dt, -1, 1);
+    if (yd) s.joyY = keyAxis(s.joyY, yd, S.joystickRatePerSec, dt, st.y); else st.y.dir = 0;
     if (s.mode === 'DOCKING') {
-      if (xd) s.joyX = clamp(s.joyX + xd * S.joystickRatePerSec * dt, -1, 1);
-      else if (S.joystickSpringDocking) s.joyX -= clamp(s.joyX, -S.joystickRatePerSec * dt, S.joystickRatePerSec * dt);
+      if (xd) s.joyX = keyAxis(s.joyX, xd, S.joystickRatePerSec, dt, st.x); else st.x.dir = 0;
+      if (!xd && S.joystickSpringDocking) s.joyX -= clamp(s.joyX, -S.joystickRatePerSec * dt, S.joystickRatePerSec * dt);
       if (!yd && S.joystickSpringDocking) s.joyY -= clamp(s.joyY, -S.joystickRatePerSec * dt, S.joystickRatePerSec * dt);
-    } else s.joyX = 0;
+    } else { s.joyX = 0; st.x.dir = 0; }
     if (s.crashCmd && yd > 0) s.crashCmd = false;
   }
 
@@ -1211,11 +1222,33 @@ details[open]>summary::after{transform:rotate(-135deg)}
     }
   }
 
-  // Nopeusvektori: sininen viiva painopisteestä, 10 s:n ennuste SOG:lla
+  // Nopeusvektori: sininen käyrä painopisteestä, 10 s:n ennuste nykyisillä nopeuksilla u, v ja r (kaartuu käännöksessä, pituus = SOG x 10 s).
+  // Lisäksi ohut valkoinen keulaviiva, josta sorron eli COG:n ja keulasuunnan eron näkee. Nuolenpää on käyrän lopussa, viimeisen pätkän suuntaan.
   function piirraNopeus() {
-    var v = K.sog(s), c = K.cogTrue(s) * RAD, L = v * ENNUSTE_S;
+    var k = nakyma.k, sog = K.sog(s), L = sog * ENNUSTE_S;
+    // keulaviiva (pituus kuten vektori, vähintään 8 m)
+    var hl = Math.max(8, L), h0 = s.hdg * RAD;
+    cx.strokeStyle = 'rgba(255,255,255,.55)'; cx.lineWidth = Math.max(0.06, 1.2 / k); cx.setLineDash([0.8, 0.6]);
+    cx.beginPath(); cx.moveTo(s.x, s.y); cx.lineTo(s.x + Math.sin(h0) * hl, s.y + Math.cos(h0) * hl); cx.stroke(); cx.setLineDash([]);
     if (L < 0.2) return;
-    nuoli(s.x, s.y, s.x + Math.sin(c) * L, s.y + Math.cos(c) * L, '#2f8bff', 2.6, 9);
+    var n = 20, dt = ENNUSTE_S / n, x = s.x, y = s.y, psi = h0, r = s.rate * RAD, u = s.v, w = s.vs, ce = s.currentE || 0, cn = s.currentN || 0, px, py, i;
+    cx.strokeStyle = '#2f8bff'; cx.fillStyle = '#2f8bff'; cx.lineWidth = Math.max(0.08, 2.6 / k); cx.lineCap = 'round'; cx.lineJoin = 'round';
+    cx.beginPath(); cx.moveTo(x, y);
+    for (i = 0; i < n; i++) {
+      var pm = psi + 0.5 * r * dt;
+      px = x; py = y;
+      x += (u * Math.sin(pm) + w * Math.cos(pm) + ce) * dt;
+      y += (u * Math.cos(pm) - w * Math.sin(pm) + cn) * dt;
+      psi += r * dt;
+      cx.lineTo(x, y);
+    }
+    cx.stroke();
+    // nuolenpää viimeisen pätkän suuntaan, koko pikseleinä
+    var dx = x - px, dy = y - py, dl = Math.hypot(dx, dy) || 1, ux = dx / dl, uy = dy / dl, ph = Math.min(9 / k, L * 0.6);
+    cx.beginPath(); cx.moveTo(x + ux * ph * 0.3, y + uy * ph * 0.3);
+    cx.lineTo(x - ux * ph * 0.7 - uy * ph * 0.5, y - uy * ph * 0.7 + ux * ph * 0.5);
+    cx.lineTo(x - ux * ph * 0.7 + uy * ph * 0.5, y - uy * ph * 0.7 - ux * ph * 0.5);
+    cx.closePath(); cx.fill();
   }
 
   function piirraKompassi() {

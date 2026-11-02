@@ -227,19 +227,30 @@
     s.crashCmd = true; s.joyY = -1; s.joyX = 0; logCmd(s, 'crash', 1);
     return true;
   }
+  // Näppäimen liike yhdellä akselilla, keskiasennossa pykälä (detent): kun ohjain tulee näppäimellä keskelle, se pysähtyy nollaan,
+  // ja keskiasennon yli jatkaminen vaatii näppäimen vapautuksen ja uuden painalluksen. Näin ohjaimen saa näppäimillä tarkasti nollaan.
+  // st on akselin painallustila { dir, start } (näppäimen suunta ja ohjaimen puoli painalluksen alussa).
+  function keyAxis(value, dir, rate, dt, st) {
+    if (!dir) { st.dir = 0; return value; }
+    if (st.dir !== dir) { st.dir = dir; st.start = value > 0 ? 1 : value < 0 ? -1 : 0; }
+    if (st.start * dir < 0 && value * st.start <= 0) return 0;   // keskellä: pysyy nollassa saman painalluksen ajan
+    var nv = clamp(value + dir * rate * dt, -1, 1);
+    if (st.start * dir < 0 && nv * st.start <= 0) return 0;      // ylitti keskiasennon tällä askeleella: pysähtyy nollaan
+    return nv;
+  }
   // Näppäinten vaikutus ohjaimiin (pidä pohjassa): tiller ja joystick liikkuvat rajoitetulla nopeudella ja jäävät asentoonsa
   function applyKeys(s, dt) {
-    var S = SETTINGS, k = s.keys;
+    var S = SETTINGS, k = s.keys, st = s.keyState || (s.keyState = { t: {}, x: {}, y: {} });
     var td = (k.tillerR ? 1 : 0) - (k.tillerL ? 1 : 0);
-    if (td) s.tiller = clamp(s.tiller + td * S.tillerRatePerSec * dt, -1, 1);
-    else if (S.tillerSpring) s.tiller -= clamp(s.tiller, -S.tillerRatePerSec * dt, S.tillerRatePerSec * dt);
+    if (td) s.tiller = keyAxis(s.tiller, td, S.tillerRatePerSec, dt, st.t);
+    else { st.t.dir = 0; if (S.tillerSpring) s.tiller -= clamp(s.tiller, -S.tillerRatePerSec * dt, S.tillerRatePerSec * dt); }
     var yd = (k.fwd ? 1 : 0) - (k.aft ? 1 : 0), xd = (k.right ? 1 : 0) - (k.left ? 1 : 0);
-    if (yd) s.joyY = clamp(s.joyY + yd * S.joystickRatePerSec * dt, -1, 1);
+    if (yd) s.joyY = keyAxis(s.joyY, yd, S.joystickRatePerSec, dt, st.y); else st.y.dir = 0;
     if (s.mode === 'DOCKING') {
-      if (xd) s.joyX = clamp(s.joyX + xd * S.joystickRatePerSec * dt, -1, 1);
-      else if (S.joystickSpringDocking) s.joyX -= clamp(s.joyX, -S.joystickRatePerSec * dt, S.joystickRatePerSec * dt);
+      if (xd) s.joyX = keyAxis(s.joyX, xd, S.joystickRatePerSec, dt, st.x); else st.x.dir = 0;
+      if (!xd && S.joystickSpringDocking) s.joyX -= clamp(s.joyX, -S.joystickRatePerSec * dt, S.joystickRatePerSec * dt);
       if (!yd && S.joystickSpringDocking) s.joyY -= clamp(s.joyY, -S.joystickRatePerSec * dt, S.joystickRatePerSec * dt);
-    } else s.joyX = 0;
+    } else { s.joyX = 0; st.x.dir = 0; }
     if (s.crashCmd && yd > 0) s.crashCmd = false;
   }
 

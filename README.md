@@ -52,6 +52,7 @@ Simulaattori toimii tietokoneella, tabletilla ja puhelimella ilman asennusta ja 
 
 - Pelaaja on itse ruorimies ja ohjaa Repan Vectorstick-järjestelmää: TILLER kääntää keulaa, JOYSTICK on TRANSIT-tilassa kaasu ja DOCKING-tilassa liikuttaa alusta eteen, taakse ja sivuttain. Rolls-Roycen paneelit (CLUTCH, TRIM–ROLL, BACKUP, ENGINE BACKUP) ja LCD-näyttö (TAB, BUCKET, NOZZLE) ovat mukana.
 - Kolmen vapausasteen voimamalli (`kasittely.js`): jettien työntövektorit (kauha, suutin, kierrosluku), rungon poikkivirtausvastus, tuuli ja kelluvan ponttonin fenderikosketus. Näkymä ylhäältä, kosketukset kirjataan purkua varten. Malli on kalibroimaton, kunnes se on ajettu oikealla veneellä.
+- Näppäimet: Q ja E tiller, nuolet ylös ja alas joystick eteen ja taakse, nuolet vasen ja oikea sivuttain (DOCKING), D vaihtaa TRANSIT/DOCKING, välilyönti crash stop, S ja X keskittävät. Ohjain pysähtyy keskiasentoon, kun se tuodaan näppäimellä keskelle; keskiasennon yli jatketaan uudella painalluksella.
 
 **Sää, valo ja meri**
 

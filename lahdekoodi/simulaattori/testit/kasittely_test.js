@@ -76,6 +76,14 @@ s = K.create(); K.setIdle(s, 1000); s.tiller = 0.2; aja(s, 30);
 const r1 = s.rate; s = K.create(); s.tiller = 0.2; aja(s, 30);
 ehto('IDLE-säädin ylös: pieni tillerin liike antaa enemmän kääntövoimaa', r1 > s.rate, f1(r1) + ' vs ' + f1(s.rate) + ' °/s');
 
+// ---- 6b. Näppäimet: keskiasennon pykälä ----
+s = K.create(); s.keys.tillerR = true; aja(s, 0.6); const t1 = s.tiller; s.keys.tillerR = false; s.keys.tillerL = true; aja(s, 2.0);
+ehto('tiller näppäimillä: vastakkainen näppäin pysäyttää ohjaimen keskelle', t1 > 0.5 && s.tiller === 0, f1(t1) + ' -> ' + f1(s.tiller));
+s.keys.tillerL = false; aja(s, 0.1); s.keys.tillerL = true; aja(s, 0.5);
+ehto('tiller näppäimillä: uusi painallus jatkaa keskiasennon yli', s.tiller < -0.3, f1(s.tiller));
+s = K.create(); s.keys.fwd = true; aja(s, 1.0); s.keys.fwd = false; s.keys.aft = true; aja(s, 3.0);
+ehto('joystick näppäimillä: alas-näppäin pysäyttää eteen-asennosta nollaan', s.joyY === 0, f1(s.joyY));
+
 // ---- 7. CLUTCH ja BACKUP ----
 s = K.create(); K.setClutch(s, 0, false); s.joyY = 0.5;
 ehto('veto ei kytkeydy joystickin ollessa poissa keskeltä', K.setClutch(s, 0, true) === false && !s.jets[0].engaged);
