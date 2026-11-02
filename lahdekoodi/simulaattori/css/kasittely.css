@@ -1,0 +1,212 @@
+/* Repan käsittelyharjoitus (kasittely.html). Väripaletti noudattaa simulaattorin sim.css:ää, Rolls-Roycen paneelit ovat tummia. */
+:root{--top-bg:#15324a;--top-ink:#e7eef3;--muted:#a9bccb;--panel:#1b3d58;--panel2:#244b69;--line:#35607f;--accent:#0f7fb3;--ok:#2aa55a;--bad:#d22a2a;--warn:#ffd400;--water:#2a6684;color-scheme:dark}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;overflow:hidden;background:#0d1a26;color:var(--top-ink);font:15px/1.35 "Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation;-webkit-tap-highlight-color:transparent;overscroll-behavior:none;-webkit-text-size-adjust:100%}
+button{font:inherit;color:inherit;cursor:pointer;touch-action:manipulation}
+button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible,[tabindex]:focus-visible{outline:2px solid #7cc4e8;outline-offset:2px}
+[hidden]{display:none !important}
+output{font-variant-numeric:tabular-nums}
+
+#app{display:flex;flex-direction:column;height:100%;height:100dvh;padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}
+
+/* ---------- Yläpalkki ---------- */
+#bar{position:relative;flex:none;z-index:60;background:var(--top-bg);padding:max(4px,env(safe-area-inset-top)) 8px 4px;display:flex;flex-direction:column;gap:2px}
+#otsikko{margin:0;padding:2px 2px 0;font-size:13px;font-weight:650;letter-spacing:.1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#rivi{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+#bar button,#bar select{min-height:44px;border:1px solid var(--line);border-radius:10px;background:var(--panel);padding:0 10px;font-weight:600;font-size:14px}
+#bar button:active{background:var(--panel2)}
+#bar button.on,.seg button.on{background:var(--accent);border-color:#5fc0ea;color:#fff}
+#bar button[aria-pressed=true]#bTauko{background:#8a5a00;border-color:#ffc94a}
+.seg{display:flex;gap:0}
+.seg button{border-radius:0 !important;min-width:44px;padding:0 8px !important}
+.seg button:first-child{border-radius:10px 0 0 10px !important}
+.seg button:last-child{border-radius:0 10px 10px 0 !important}
+.seg button+button{border-left-width:0 !important}
+#asetBtn{margin-left:auto;padding:0 10px}
+#aset{display:none;flex-direction:column;gap:6px;position:absolute;left:0;right:0;top:100%;background:var(--top-bg);padding:6px 10px 12px;border-bottom:1px solid var(--line);box-shadow:0 8px 16px rgba(0,0,0,.5)}
+#aset.auki{display:flex}
+/* Asetuslista puhelimessa: nimi ja lukema vasemmalla, säädin oikealla samalla rivillä, jotta lista ei peitä venettä */
+.fld{display:flex;flex-direction:row;align-items:center;gap:10px;font-size:13px;color:var(--muted)}
+.fld-nimi{display:flex;flex-direction:column;flex:0 0 112px;line-height:1.2}
+.fld-nimi output{color:#fff;font-weight:650}
+.fld select,.fld input[type=range]{flex:1;min-width:0}
+#bar select{font-size:16px;width:100%}
+input[type=range]{width:100%;height:44px;margin:0;accent-color:var(--accent);background:transparent}
+.kbd{display:none;opacity:.7;font-weight:500;margin-left:3px}
+@media (hover:hover) and (pointer:fine){.kbd{display:inline}}
+
+/* ---------- Asettelu: puhelin pystyssä, canvas ylhäällä ja ohjaimet sen alla ---------- */
+#main{flex:1;min-height:0;display:flex;flex-direction:column}
+#nakyma{position:relative;flex:none;height:45%;min-height:230px;overflow:hidden;background:var(--water);touch-action:none}
+#kanvas{position:absolute;left:0;top:0;width:100%;height:100%;display:block;touch-action:none;cursor:crosshair}
+#sivu{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:6px 8px calc(16px + env(safe-area-inset-bottom));background:#0d1a26}
+
+/* Mittarit canvasin päällä kulmissa (eivät nappaa kosketuksia) */
+.mittarit{position:absolute;top:6px;display:flex;flex-direction:column;gap:2px;pointer-events:none;z-index:5}
+.mittarit.vas{left:6px;width:104px}
+.mittarit.oik{right:6px;width:112px}
+.g{display:flex;flex-direction:column;background:rgba(10,22,32,.66);border-radius:6px;padding:1px 6px 2px;line-height:1.15}
+.gl{font-size:9.5px;letter-spacing:.3px;color:#b9cddb;text-transform:uppercase}
+.gv{font:700 14px/1.15 ui-monospace,Menlo,Consolas,monospace;color:#fff;white-space:nowrap}
+.g.vaara .gv{color:#ff6b6b}
+.g.varoitus{background:rgba(120,20,20,.8)}
+#taukoMerkki{position:absolute;left:50%;top:70px;transform:translateX(-50%);padding:4px 14px;border-radius:8px;background:rgba(138,90,0,.9);border:1px solid #ffc94a;font-weight:700;letter-spacing:1px;pointer-events:none;z-index:6}
+#toast{position:absolute;left:8px;right:8px;bottom:58px;margin:0 auto;max-width:420px;padding:8px 12px;border-radius:10px;background:rgba(30,10,10,.92);border:1px solid #ff8a8a;color:#fff;font-size:14px;text-align:center;pointer-events:none;z-index:8}
+.nakyma-napit{position:absolute;bottom:6px;display:flex;z-index:7}
+.nakyma-napit.vas{left:6px}
+.nakyma-napit.oik{right:6px}
+.nakyma-napit button{min-height:44px;min-width:44px;padding:0 10px;border:1px solid rgba(255,255,255,.28);background:rgba(10,22,32,.72);font-weight:650;font-size:14px}
+.nakyma-napit button+button{border-left-width:0}
+.nakyma-napit button:first-child{border-radius:10px 0 0 10px}
+.nakyma-napit button:last-child{border-radius:0 10px 10px 0}
+.nakyma-napit button.on{background:var(--accent);border-color:#5fc0ea}
+.nakyma-napit button:active{background:var(--panel2)}
+#bZoomUt,#bZoomIn{font-size:22px;line-height:1;min-width:48px}
+
+/* ---------- Ohjaimet ---------- */
+#ohjaimet{display:grid;grid-template-columns:minmax(0,1fr) 84px minmax(0,1fr);gap:6px;margin-bottom:10px}
+.laatikko{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:6px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.ots{display:flex;justify-content:space-between;align-items:baseline;gap:4px;font-size:12px;min-height:18px}
+.ots b{font-size:12px;letter-spacing:.5px}
+.ots output{color:#cfe7f5;font-size:12px;font-weight:600;white-space:nowrap}
+.laatikko button{min-height:44px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);font-weight:600;font-size:13px;padding:0 6px}
+.laatikko button:active{background:var(--accent)}
+.valinta{display:flex;align-items:center;gap:6px;min-height:44px;font-size:12px;color:var(--muted);line-height:1.2}
+.valinta input{width:22px;height:22px;flex:none;margin:0;accent-color:var(--accent)}
+
+/* TILLER: vaakasuuntainen vipu */
+.raide{position:relative;height:64px;border-radius:12px;background:#0f2538;border:1px solid var(--line);touch-action:none;cursor:ew-resize}
+.raide .uurre{position:absolute;left:22px;right:22px;top:50%;height:6px;margin-top:-3px;border-radius:3px;background:#2a4a63}
+.raide .keskitikki{position:absolute;left:50%;top:10px;bottom:10px;width:2px;margin-left:-1px;background:#7fa4bd;opacity:.7}
+.nuppi{position:absolute;width:46px;height:54px;top:50%;left:0;margin-top:-27px;border-radius:12px;background:linear-gradient(#e8eef2,#aeb9c1);border:2px solid #5c6b76;box-shadow:0 2px 6px rgba(0,0,0,.5);pointer-events:none}
+.raide.veto .nuppi,.kentta.veto .nuppi{background:linear-gradient(#fff,#cfe7f5);border-color:#7cc4e8}
+.asteikko{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:-3px;padding:0 4px}
+
+/* Keskipalsta: CRASH STOP ja TRANSIT/DOCKING */
+.keski{display:flex;flex-direction:column;gap:6px;min-width:0}
+.crash{flex:1;min-height:92px;border-radius:12px;border:2px solid #ffb4b4;background:linear-gradient(#e03030,#a01414);color:#fff;font-weight:800;font-size:13px;letter-spacing:.5px;line-height:1.1;padding:4px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;box-shadow:0 2px 8px rgba(0,0,0,.5)}
+.crash:active{background:linear-gradient(#ff5050,#c01c1c)}
+.tilat{display:flex;flex-direction:column;gap:4px}
+.tilat button{min-height:44px;border:1px solid var(--line);border-radius:10px;background:var(--panel);font-weight:700;font-size:11px;letter-spacing:.2px;padding:0 2px}
+.tilat button.on{background:var(--accent);border-color:#5fc0ea;color:#fff}
+
+/* JOYSTICK: kaksiakselinen alue */
+.kentta{position:relative;width:100%;aspect-ratio:1/1;border-radius:14px;background:#0f2538;border:1px solid var(--line);touch-action:none;cursor:grab;overflow:hidden}
+.kentta .risti{position:absolute;inset:0;background:linear-gradient(#7fa4bd,#7fa4bd) center/2px 76% no-repeat,linear-gradient(#7fa4bd,#7fa4bd) center/76% 2px no-repeat;opacity:.55}
+.kentta .rako{display:none;position:absolute;left:50%;top:8%;bottom:8%;width:14px;margin-left:-7px;border-radius:7px;background:#2a4a63}
+.kentta.transit .risti{background:linear-gradient(#7fa4bd,#7fa4bd) center/2px 0 no-repeat}
+.kentta.transit .rako{display:block}
+.kentta .nuppi{width:50px;height:50px;top:0;left:0;margin-top:0;border-radius:50%}
+
+/* ---------- Avattavat osiot ---------- */
+.rr-ulko{margin-bottom:8px;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+.rr-ulko>summary{padding:0 12px;font-weight:650}
+summary{min-height:44px;display:flex;align-items:center;gap:8px;cursor:pointer;list-style:none;touch-action:manipulation}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"";margin-left:auto;width:9px;height:9px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg);transition:transform .15s;opacity:.7;flex:none}
+details[open]>summary::after{transform:rotate(-135deg)}
+.lukema{color:var(--muted);font-weight:500}
+.rr-sisus{padding:0 8px 8px;display:flex;flex-direction:column;gap:6px}
+
+/* Rolls-Roycen paneelit: musta ja harmaa tausta, valkoinen teksti */
+.rr{background:#161616;border:1px solid #444;border-radius:10px;color:#fff}
+.rr>summary{padding:0 12px;font-weight:700;font-size:13px;letter-spacing:.4px}
+.rr-runko{padding:2px 10px 10px;display:flex;flex-direction:column;gap:8px}
+.rr-rivi{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.rr-nimi{font-weight:700;letter-spacing:.5px;min-width:42px}
+.rr-kortti{border:1px solid #333;border-radius:8px;padding:6px 8px;display:flex;flex-direction:column;gap:4px;background:#1d1d1d}
+.keinu{display:flex}
+.keinu button,.backflush,.rr button{min-height:44px;min-width:60px;padding:0 10px;border:1px solid #666;background:#2c2c2c;color:#fff;font-weight:700;font-size:12px;letter-spacing:.3px}
+.keinu button:first-child{border-radius:8px 0 0 8px}
+.keinu button:last-child{border-radius:0 8px 8px 0}
+.keinu button+button{border-left-width:0}
+.keinu button.on{background:#3b7f3b;border-color:#8bd88b}
+.keinu button[data-clutch="0"].on,.keinu button[data-backup="1"].on,.keinu button[data-engbackup="1"].on,.keinu button[data-trimauto="0"].on,.keinu button[data-int="1"].on{background:#9a6b00;border-color:#ffc94a}
+.backflush{border-radius:8px !important;margin-left:auto}
+.backflush.vilkkuu{animation:vilkku .5s steps(2,start) infinite;background:#0f6fa0;border-color:#8fd4f5}
+@keyframes vilkku{50%{background:#2c2c2c;border-color:#666}}
+.rr-saadin{display:flex;flex-direction:column;font-size:12px;color:#ddd;gap:0}
+.rr-saadin>span{display:flex;justify-content:space-between;font-weight:600;letter-spacing:.3px}
+.rr-saadin output{color:#fff}
+.rr-saadin input[disabled]{opacity:.45}
+.rr-huom{margin:0;font-size:12px;color:#aab;line-height:1.35}
+.viesti{margin:0;min-height:0;font-size:13px;color:#ffb0b0;font-weight:650}
+.viesti:empty{display:none}
+
+/* LCD DISPLAY AND ALARM PANEL (käsikirjan kuva 13) */
+.lcd{background:#050805;border:2px solid #555;border-radius:8px;padding:8px 10px 10px;color:#9dffa0;font-family:ui-monospace,Menlo,Consolas,monospace}
+.lcd-ylaosa{display:flex;justify-content:space-between;align-items:center;gap:6px;margin-bottom:6px;min-height:20px}
+.lcd-nimi{font-weight:800;letter-spacing:1px;color:#e8ffe9;font-size:13px}
+.lcd-lamput{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
+.lamppu{font-size:9.5px;font-weight:700;padding:1px 5px;border-radius:3px;background:#3a3a00;color:#ffe34d;border:1px solid #7a7a00}
+.lamppu.hael{background:#400;color:#ff8a8a;border-color:#a33}
+.lcd-palkit{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.vp{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0}
+.vp-raide{position:relative;width:26px;height:96px;border:1px solid #3d6b40;background:#0b140b}
+.vp-raide::before{content:"";position:absolute;left:-5px;right:-5px;top:50%;height:1px;background:#6c9b6f}
+.vp-raide.tab::before{display:none}
+.vp-raide i{position:absolute;left:1px;right:1px;background:#37e03d;height:0;bottom:50%}
+.vp-raide.tab i{bottom:0}
+.vp-raide i.taakse{background:#ff5a4d}
+.vp-nimi{font-size:9.5px;text-align:center;line-height:1.1;color:#cfe;white-space:nowrap}
+.vp-arvo{font-size:11px;color:#fff;min-height:14px}
+.lcd-vaaka{display:flex;flex-direction:column;gap:5px;margin-top:8px}
+.hp{display:grid;grid-template-columns:78px 1fr 46px;align-items:center;gap:6px}
+.hp-nimi{font-size:9.5px;color:#cfe}
+.hp-raide{position:relative;height:16px;border:1px solid #3d6b40;background:#0b140b}
+.hp-raide::before{content:"";position:absolute;top:-3px;bottom:-3px;left:50%;width:1px;background:#6c9b6f}
+.hp-raide i{position:absolute;top:1px;bottom:1px;left:50%;width:0;background:#37e03d}
+.hp-arvo{font-size:11px;color:#fff;text-align:right}
+.lcd-rpm{display:flex;justify-content:space-between;margin-top:8px;font-size:12px;color:#cfe}
+.lcd-rpm b{color:#fff;font-size:14px;margin-left:4px}
+
+/* Loki */
+.loki-ala{padding:0 10px 10px;display:flex;flex-direction:column;gap:6px}
+.loki-yla{display:flex;align-items:center;gap:8px;justify-content:space-between}
+.loki-selite{font-size:12px;color:var(--muted);flex:1}
+#bLokiTyhjenna{min-height:44px;min-width:84px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);font-weight:600}
+.loki{list-style:none;margin:0;padding:0;max-height:260px;overflow-y:auto;border-radius:8px;background:#0d1a26}
+.loki li{display:flex;flex-wrap:wrap;gap:2px 8px;align-items:baseline;padding:6px 8px;border-bottom:1px solid #1f3a50;font-size:13px}
+.loki .lt{font-family:ui-monospace,Menlo,Consolas,monospace;color:var(--muted);min-width:44px}
+.loki .lk{font-weight:650}
+.loki .lv{font-family:ui-monospace,Menlo,Consolas,monospace}
+.loki .arvio{padding:0 7px;border-radius:9px;font-size:12px;font-weight:700;color:#10202c}
+.arvio.pehmea{background:#7ee2a0}
+.arvio.tuntuva{background:#ffd966}
+.arvio.kova{background:#ff7b7b}
+#lokiTyhja{padding:4px 2px}
+
+/* ---------- Ohje ---------- */
+#ohje{margin-top:4px;padding:4px 4px 8px;color:var(--muted);font-size:13px;line-height:1.5}
+#ohje h2{font-size:14px;color:var(--top-ink);margin:4px 0}
+#ohje p{margin:0 0 8px}
+
+/* ---------- Leveä näyttö: canvas vasemmalla, ohjaimet, paneelit ja loki oikealla ---------- */
+@media (min-width:800px){
+  #bar{flex-direction:row;align-items:center;flex-wrap:wrap;gap:6px 14px;padding:6px 12px}
+  #otsikko{font-size:14px;padding:0}
+  #asetBtn{display:none}
+  #aset{display:flex !important;flex-direction:row;align-items:center;position:static;padding:0;border:0;box-shadow:none;gap:10px;background:none;margin-left:auto}
+  .fld{gap:6px}
+  .fld-nimi{flex:none;flex-direction:row;gap:6px}
+  .fld input[type=range]{flex:none;width:92px}
+  #bar select{flex:none;width:auto;min-width:0;padding:0 8px}
+  #main{flex-direction:row}
+  #nakyma{flex:1;height:auto;min-height:0}
+  #sivu{flex:none;width:min(470px,42vw);min-width:380px;border-left:1px solid var(--line)}
+  .mittarit.vas{width:130px}
+  .mittarit.oik{width:140px}
+  .gv{font-size:16px}
+  .kentta{max-width:220px;margin:0 auto}
+}
+/* Matala leveä näyttö (puhelin vaakasuunnassa): tiivis yläpalkki */
+@media (min-width:800px) and (max-height:520px){
+  #bar{padding-top:max(3px,env(safe-area-inset-top));padding-bottom:3px}
+  #bar button,#bar select{min-height:44px}
+  #otsikko{font-size:13px}
+}
+@media (max-width:359px){
+  #ohjaimet{grid-template-columns:minmax(0,1fr) 76px minmax(0,1fr)}
+  .mittarit.vas{width:96px}
+  .mittarit.oik{width:100px}
+}

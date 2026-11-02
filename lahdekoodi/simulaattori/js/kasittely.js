@@ -92,7 +92,7 @@
     jetBollardN: 15000,               // paaluveto jettiä kohti (perehdytys: noin 3 000 kg yhteensä)
     thrustSpeedLoss: 0.3, thrustRefKn: 35,   // eteenpäin-työnnön väheneminen vauhdissa (liike.js)
     reverseEff: 0.6,                  // peruutustyöntö paikallaan osuutena eteenpäin-työnnöstä (oletus)
-    reverseSpeedGain: 3.0,            // peruutustyöntö kasvaa vauhdissa: kerroin (1 + gain * u / vRef) (kalibroitu: crash stop 28 kn:sta 39 m, 6 s)
+    reverseSpeedGain: 3.5,            // peruutustyöntö kasvaa vauhdissa: kerroin (1 + gain * u / vRef) (kalibroitu: crash stop 28 kn:sta noin 40 m, 6 s)
     lateralBucketBase: 0.8, lateralBucketSlope: 0.2,   // sivuvoiman kerroin 0,8 + 0,2 b (neutraali kauha ohjaa 80 %:lla)
     nozzleMaxDeg: 30,                 // suuttimen enimmäiskulma (oletus)
     nozzleRateDegPerSec: 30, bucketRatePerSec: 1.0, rpmLagSec: 1.0, rpmRateMaxPerSec: 1200,   // kauha neutraalista ääriasentoon 1 s, täydestä eteen täyteen peruutukseen 2 s
@@ -106,7 +106,8 @@
     // tuuli (liike.js:n arvot) ja tuulen painekeskiö painopisteestä eteenpäin (päällysrakenne edessä)
     windSideAreaM2: 25, windFrontAreaM2: 12, windCy: 1.0, windCx: 0.6, windCpXFromCgM: 2.2,
     // kosketus (fenderit, D-kumi 100 mm): jousi N/m, vaimennin Ns/m, kitka (14 t, 0,5 kn kylki edellä: huippuvoima noin 15 kN, painuma noin 5 cm)
-    contactK: 100000, contactC: 15000, contactMu: 0.4, contactLogMinMs: 0.05,
+    contactK: 100000, contactC: 15000, contactMu: 0.4, contactLogMinMs: 0.05, contactLogGapSec: 1.0,   // kosketus kirjataan kerran, uusi merkintä vasta sekunnin erillään olon jälkeen
+    crashEndMs: 0.4,                  // crash stop: ruorimies palauttaa joystickin keskelle, kun nopeus on tämän alle (kauha ehtii neutraaliin liikkeen loppuessa)
     // rungon ääriviiva [x peräpeilistä, puolileveys] (kansiviiva + törmäyskumi 0,04 m)
     hullOutline: [[-0.3, 1.2], [0, 2.245], [2, 2.247], [4, 2.249], [5, 2.242], [6, 2.206], [7, 2.123], [8, 1.98], [9, 1.773], [10, 1.503], [11, 1.152], [11.5, 0.923], [12, 0.579], [12.25, 0.06]],
     // trimmi ja kallistus näkymää varten (liike.js)
@@ -221,7 +222,7 @@
   function setCurrent(s, toDeg, speed) { s.currentTo = norm360(Number(toDeg) || 0); s.currentSpeed = Math.max(0, Number(speed) || 0); }
   // Crash stop (käsikirja 9.4.5): TRANSIT-tilassa joystick taakse ääriasentoon; kun eteenpäin liike loppuu, joystick keskelle
   function crashStop(s) {
-    if (s.v <= 0.15) return false;
+    if (s.v <= SETTINGS.crashEndMs) return false;
     if (s.mode !== 'TRANSIT') setMode(s, 'TRANSIT');
     s.crashCmd = true; s.joyY = -1; s.joyX = 0; logCmd(s, 'crash', 1);
     return true;
@@ -253,7 +254,7 @@
       // combinator: ensimmäinen neljännes kauhaa, loppu kierroksia
       var jy = s.joyY, f = S.combinatorBucketFrac, a = Math.abs(jy), b = clamp(jy / f, -1, 1);
       var rpm = idle + (S.rpmMax * (jy < 0 ? S.reverseRpmMax : 1) - idle) * clamp((a - f) / (1 - f), 0, 1);
-      if (s.crashCmd && u <= 0.15) { s.crashCmd = false; s.joyY = 0; b = 0; rpm = idle; logCmd(s, 'joy0', 0); }
+      if (s.crashCmd && u <= S.crashEndMs) { s.crashCmd = false; s.joyY = 0; b = 0; rpm = idle; logCmd(s, 'joy0', 0); }
       for (i = 0; i < 2; i++) { j = s.jets[i]; j.rpmCmd = rpm; j.bucketCmd = b; j.nozzleCmd = s.tiller * nMax; }
       s.demand = { X: 0, Y: 0, N: 0 };
     } else {
@@ -377,7 +378,7 @@
   }
   // Kosketusvoimat: rungon pisteet esteessä ja esteen kulmat rungossa. Palauttaa runkokoordinaatiston { X, Y, N } ja kirjaa kosketukset.
   function contactForces(s, dt) {
-    var S = SETTINGS, X = 0, Y = 0, N = 0, any = false;
+    var S = SETTINGS, X = 0, Y = 0, N = 0, any = false, logged = false;
     if (!s.obstacles.length) { s.inContact = false; return { X: 0, Y: 0, N: 0 }; }
     var hull = hullPolygon(s), h = s.hdg * RAD, sh = Math.sin(h), ch = Math.cos(h), r = s.rate * RAD;
     var apply = function (px, py, nx, ny, pen) {
@@ -391,7 +392,10 @@
       var bx = fx * sh + fy * ch, by = fx * ch - fy * sh;   // maailmasta runkoon: eteen = (sin h, cos h), oikealle = (cos h, -sin h)
       var rbx = rx * sh + ry * ch, rby = rx * ch - ry * sh;
       X += bx; Y += by; N += rbx * by - rby * bx; any = true;
-      if (!s.inContact && -vn > S.contactLogMinMs) logCmd(s, 'kosketus', Math.round(-vn / KN * 100) / 100, { vnMs: -vn, speedKn: Math.hypot(s.v, s.vs) / KN, px: px, py: py });
+      if (!logged && !s.inContact && -vn > S.contactLogMinMs && s.t - (s.lastContactT || -1e9) > S.contactLogGapSec) {
+        logged = true; s.lastContactT = s.t;
+        logCmd(s, 'kosketus', Math.round(-vn / KN * 100) / 100, { vnMs: -vn, speedKn: Math.hypot(s.v, s.vs) / KN, px: px, py: py });
+      }
     };
     for (var k = 0; k < s.obstacles.length; k++) {
       var poly = obstaclePolygon(s.obstacles[k]), i, p, e;
@@ -400,6 +404,7 @@
       // esteen kulma rungon sisällä: lähin reuna osoittaa rungosta ulos (kulman poistumissuunta), runkoa työnnetään vastakkaiseen suuntaan
       for (i = 0; i < poly.length; i++) { p = poly[i]; if (pointInPoly(p, hull)) { e = nearestEdge(p, hull); apply(p[0], p[1], -e.nx, -e.ny, e.dist); } }
     }
+    if (any) s.lastContactT = s.t;   // kosketuksen kesto: erillään olon laskenta alkaa, kun kosketus päättyy
     s.inContact = any;
     return { X: X, Y: Y, N: N };
   }

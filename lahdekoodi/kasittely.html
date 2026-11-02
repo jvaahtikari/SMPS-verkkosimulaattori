@@ -1,0 +1,279 @@
+<!doctype html>
+<!--
+  Repa – käsittelyharjoitus, 2D-testisivu (malli v0, kalibroimaton)
+  Copyright 2026 Jussi Vaahtikari
+  Lisenssi: PolyForm Noncommercial 1.0.0
+  https://polyformproject.org/licenses/noncommercial/1.0.0
+  Required Notice: Copyright 2026 Jussi Vaahtikari
+
+  Ei navigointikäyttöön. Käsittelymalli on kalibroimaton arvio, eikä se kuvaa oikean aluksen käyttäytymistä.
+-->
+<html lang="fi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#15324a">
+<title>Repa – käsittelyharjoitus</title>
+<link rel="stylesheet" href="simulaattori/css/kasittely.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- Yläpalkki -->
+  <header id="bar">
+    <h1 id="otsikko">Repa – käsittelyharjoitus (malli v0, kalibroimaton)</h1>
+    <div id="rivi">
+      <button type="button" id="bTauko" aria-pressed="false" title="Tauko (P)">Tauko <span class="kbd">(P)</span></button>
+      <div class="seg" id="segNopeus" role="group" aria-label="Aikakerroin">
+        <button type="button" data-v="1" class="on" aria-pressed="true" title="Aikakerroin 1x (näppäin 1)">1x</button>
+        <button type="button" data-v="2" aria-pressed="false" title="Aikakerroin 2x (näppäin 2)">2x</button>
+        <button type="button" data-v="5" aria-pressed="false" title="Aikakerroin 5x (näppäin 5)">5x</button>
+      </div>
+      <button type="button" id="bNollaa" title="Nollaa lähtötilanteeseen (R)">Nollaa <span class="kbd">(R)</span></button>
+      <button type="button" id="asetBtn" aria-expanded="false" aria-controls="aset" title="Lähtötilanne ja tuuli">Asetukset</button>
+    </div>
+    <div id="aset">
+      <label class="fld" for="selTilanne"><span class="fld-nimi">Lähtötilanne</span>
+        <select id="selTilanne">
+          <option value="lahestyminen">Lähestyminen</option>
+          <option value="kylki">Kylki ponttonissa</option>
+          <option value="vapaa">Vapaa vesi</option>
+        </select>
+      </label>
+      <label class="fld" for="rTuuliSuunta"><span class="fld-nimi">Tuuli mistä <output id="oTuuliSuunta">0°</output></span>
+        <input type="range" id="rTuuliSuunta" min="0" max="359" step="1" value="0">
+      </label>
+      <label class="fld" for="rTuuliNopeus"><span class="fld-nimi">Tuulen nopeus <output id="oTuuliNopeus">tyyni</output></span>
+        <input type="range" id="rTuuliNopeus" min="0" max="14" step="0.5" value="0">
+      </label>
+    </div>
+  </header>
+
+  <main id="main">
+
+    <!-- Ylhäältä nähty käsittelynäkymä -->
+    <section id="nakyma" aria-label="Ylhäältä nähty käsittelynäkymä">
+      <canvas id="kanvas" role="img" aria-label="Repa ja kelluva ponttoni ylhäältä nähtynä"></canvas>
+      <div class="mittarit vas" id="mitVas" aria-label="Mittarit">
+        <div class="g"><span class="gl">HDG</span><span class="gv" id="gHdg">000°</span></div>
+        <div class="g"><span class="gl">SOG</span><span class="gv" id="gSog">0,0 kn</span></div>
+        <div class="g"><span class="gl">STW u</span><span class="gv" id="gU">0,0 kn</span></div>
+        <div class="g"><span class="gl">STW v</span><span class="gv" id="gV">0,0 kn</span></div>
+        <div class="g"><span class="gl">Kääntyminen</span><span class="gv" id="gR">0,0 °/s</span></div>
+      </div>
+      <div class="mittarit oik" id="mitOik" aria-label="Mittarit">
+        <div class="g" id="gEtaisyysLaatikko"><span class="gl">Etäisyys</span><span class="gv" id="gEtaisyys">–</span></div>
+        <div class="g"><span class="gl">Tuuli</span><span class="gv" id="gTuuli">tyyni</span></div>
+        <div class="g"><span class="gl">Aika</span><span class="gv" id="gAika">0:00</span></div>
+        <div class="g" id="gKosketusLaatikko"><span class="gl">Kosketukset</span><span class="gv" id="gKosketus">0</span></div>
+      </div>
+      <div id="taukoMerkki" hidden>TAUKO</div>
+      <div id="toast" role="status" aria-live="polite" hidden></div>
+      <div class="nakyma-napit vas" role="group" aria-label="Näkymän suunta">
+        <button type="button" data-n="pohjoinen" class="on" aria-pressed="true">Pohjoinen ylös</button>
+        <button type="button" data-n="keula" aria-pressed="false">Keula ylös</button>
+      </div>
+      <div class="nakyma-napit oik" role="group" aria-label="Zoom">
+        <button type="button" id="bZoomUt" aria-label="Loitonna" title="Loitonna">−</button>
+        <button type="button" id="bZoomIn" aria-label="Lähennä" title="Lähennä">+</button>
+      </div>
+    </section>
+
+    <!-- Ohjaimet, paneelit, loki ja ohje -->
+    <section id="sivu" aria-label="Ohjaimet">
+
+      <div id="ohjaimet">
+        <div class="laatikko" id="tillerLaatikko">
+          <div class="ots"><b>TILLER</b> <output id="oTiller">0 %</output></div>
+          <div id="tillerRaide" class="raide" role="slider" tabindex="0" aria-label="TILLER" aria-valuemin="-100" aria-valuemax="100" aria-valuenow="0">
+            <span class="uurre"></span><span class="keskitikki"></span><span id="tillerNuppi" class="nuppi"></span>
+          </div>
+          <div class="asteikko" aria-hidden="true"><span>−100</span><span>0</span><span>+100</span></div>
+          <button type="button" id="bTillerKeskelle" title="Tiller keskelle (S)">Keskelle <span class="kbd">(S)</span></button>
+          <label class="valinta"><input type="checkbox" id="cbJousi"><span>Tiller jousipalautus</span></label>
+        </div>
+
+        <div class="keski">
+          <button type="button" id="bCrash" class="crash" title="CRASH STOP (välilyönti)">CRASH STOP<span class="kbd">(välilyönti)</span></button>
+          <div class="tilat" role="group" aria-label="Joystickin valintakytkin">
+            <button type="button" data-tila="TRANSIT" aria-pressed="false" title="TRANSIT: joystick on kaasu">TRANSIT</button>
+            <button type="button" data-tila="DOCKING" aria-pressed="true" class="on" title="DOCKING: joystick liikuttaa alusta (D vaihtaa tilaa)">DOCKING</button>
+          </div>
+        </div>
+
+        <div class="laatikko" id="joyLaatikko">
+          <div class="ots"><b>JOYSTICK</b> <output id="oJoy">0 / 0</output></div>
+          <div id="joyKentta" class="kentta" role="application" tabindex="0" aria-label="JOYSTICK">
+            <span class="risti"></span><span class="rako"></span><span id="joyNuppi" class="nuppi"></span>
+          </div>
+          <button type="button" id="bJoyKeskelle" title="Joystick keskelle (X)">Keskelle <span class="kbd">(X)</span></button>
+        </div>
+      </div>
+
+      <details id="paneelit" class="rr-ulko">
+        <summary>Paneelit</summary>
+        <div class="rr-sisus">
+
+          <details class="rr" id="pLcd" open>
+            <summary>LCD DISPLAY AND ALARM PANEL</summary>
+            <div class="rr-runko">
+              <div class="lcd" id="lcd">
+                <div class="lcd-ylaosa"><span class="lcd-nimi">VECTOR Controls</span><span class="lcd-lamput" id="lcdLamput"></span></div>
+                <div class="lcd-palkit">
+                  <div class="vp"><b class="vp-arvo" id="lcdV0">0 %</b><div class="vp-raide tab"><i id="lcdF0"></i></div><span class="vp-nimi">PORT TAB</span></div>
+                  <div class="vp"><b class="vp-arvo" id="lcdV1">0 %</b><div class="vp-raide"><i id="lcdF1"></i></div><span class="vp-nimi">PORT BUCKET</span></div>
+                  <div class="vp"><b class="vp-arvo" id="lcdV2">0 %</b><div class="vp-raide"><i id="lcdF2"></i></div><span class="vp-nimi">STBD BUCKET</span></div>
+                  <div class="vp"><b class="vp-arvo" id="lcdV3">0 %</b><div class="vp-raide tab"><i id="lcdF3"></i></div><span class="vp-nimi">STBD TAB</span></div>
+                </div>
+                <div class="lcd-vaaka">
+                  <div class="hp"><span class="hp-nimi">PORT NOZZLE</span><div class="hp-raide"><i id="lcdF4"></i></div><b class="hp-arvo" id="lcdV4">0,0°</b></div>
+                  <div class="hp"><span class="hp-nimi">STBD NOZZLE</span><div class="hp-raide"><i id="lcdF5"></i></div><b class="hp-arvo" id="lcdV5">0,0°</b></div>
+                </div>
+                <div class="lcd-rpm"><span>PORT RPM <b id="lcdRpm0">650</b></span><span>STBD RPM <b id="lcdRpm1">650</b></span></div>
+              </div>
+            </div>
+          </details>
+
+          <details class="rr" id="pClutch">
+            <summary>CLUTCH PANEL</summary>
+            <div class="rr-runko">
+              <div class="rr-rivi" data-puoli="0">
+                <span class="rr-nimi">PORT</span>
+                <div class="keinu" role="group" aria-label="PORT kytkin">
+                  <button type="button" data-clutch="1" class="on">ENGAGE</button>
+                  <button type="button" data-clutch="0">DISENG</button>
+                </div>
+                <button type="button" class="backflush" data-bf="0">BACKFLUSH</button>
+              </div>
+              <div class="rr-rivi" data-puoli="1">
+                <span class="rr-nimi">STBD</span>
+                <div class="keinu" role="group" aria-label="STBD kytkin">
+                  <button type="button" data-clutch="1" class="on">ENGAGE</button>
+                  <button type="button" data-clutch="0">DISENG</button>
+                </div>
+                <button type="button" class="backflush" data-bf="1">BACKFLUSH</button>
+              </div>
+              <label class="rr-saadin" for="rIdle"><span>IDLE <output id="oIdle">650 rpm</output></span>
+                <input type="range" id="rIdle" min="650" max="1100" step="10" value="650">
+              </label>
+              <p class="viesti" id="clutchViesti" role="status"></p>
+              <p class="rr-huom">ENGAGE onnistuu vain, kun JOYSTICK on keskellä. BACKFLUSH vilkkuu kolme sekuntia, mutta se ei vaikuta malliin.</p>
+            </div>
+          </details>
+
+          <details class="rr" id="pTrim">
+            <summary>TRIM–ROLL PANEL</summary>
+            <div class="rr-runko">
+              <div class="rr-rivi">
+                <span class="rr-nimi">TAB</span>
+                <div class="keinu" role="group" aria-label="TRIM–ROLL PANEL AUTO tai BACKUP">
+                  <button type="button" data-trimauto="1" class="on">AUTO</button>
+                  <button type="button" data-trimauto="0">BACKUP</button>
+                </div>
+              </div>
+              <label class="rr-saadin" for="rTrim"><span>TRIM</span><input type="range" id="rTrim" min="-100" max="100" value="0" disabled></label>
+              <label class="rr-saadin" for="rRoll"><span>ROLL</span><input type="range" id="rRoll" min="-100" max="100" value="0" disabled></label>
+              <p class="rr-huom">TRIM- ja ROLL-säätimet ovat vain näyttönä. AUTO-asennossa interceptorit (TAB) seuraavat nopeutta, ja BACKUP-asennossa ne pysyvät paikallaan.</p>
+            </div>
+          </details>
+
+          <details class="rr" id="pBackup">
+            <summary>BACKUP PANEL</summary>
+            <div class="rr-runko">
+              <div class="rr-kortti" data-puoli="0">
+                <div class="rr-rivi">
+                  <span class="rr-nimi">PORT</span>
+                  <div class="keinu" role="group" aria-label="PORT BACKUP PANEL">
+                    <button type="button" data-backup="0" class="on">AUTO</button>
+                    <button type="button" data-backup="1">BACKUP</button>
+                  </div>
+                  <div class="keinu" role="group" aria-label="PORT INT tai WJ">
+                    <button type="button" data-int="0" class="on">WJ</button>
+                    <button type="button" data-int="1">INT</button>
+                  </div>
+                </div>
+                <label class="rr-saadin" for="rBkNoz0"><span>PORT NOZZLE <output id="oBkNoz0">0°</output></span>
+                  <input type="range" id="rBkNoz0" min="-30" max="30" step="1" value="0" disabled></label>
+                <label class="rr-saadin" for="rBkKau0"><span id="lBkKau0">PORT BUCKET <output id="oBkKau0">0 %</output></span>
+                  <input type="range" id="rBkKau0" min="-100" max="100" step="1" value="0" disabled></label>
+              </div>
+              <div class="rr-kortti" data-puoli="1">
+                <div class="rr-rivi">
+                  <span class="rr-nimi">STBD</span>
+                  <div class="keinu" role="group" aria-label="STBD BACKUP PANEL">
+                    <button type="button" data-backup="0" class="on">AUTO</button>
+                    <button type="button" data-backup="1">BACKUP</button>
+                  </div>
+                  <div class="keinu" role="group" aria-label="STBD INT tai WJ">
+                    <button type="button" data-int="0" class="on">WJ</button>
+                    <button type="button" data-int="1">INT</button>
+                  </div>
+                </div>
+                <label class="rr-saadin" for="rBkNoz1"><span>STBD NOZZLE <output id="oBkNoz1">0°</output></span>
+                  <input type="range" id="rBkNoz1" min="-30" max="30" step="1" value="0" disabled></label>
+                <label class="rr-saadin" for="rBkKau1"><span id="lBkKau1">STBD BUCKET <output id="oBkKau1">0 %</output></span>
+                  <input type="range" id="rBkKau1" min="-100" max="100" step="1" value="0" disabled></label>
+              </div>
+              <p class="rr-huom">BACKUP-asennossa liukusäätimet ohittavat Vectorstickin. WJ ohjaa kauhaa (BUCKET) ja INT interceptoria (TAB), jolloin vain positiivinen arvo vaikuttaa.</p>
+            </div>
+          </details>
+
+          <details class="rr" id="pEngine">
+            <summary>ENGINE BACKUP PANEL</summary>
+            <div class="rr-runko">
+              <div class="rr-kortti" data-puoli="0">
+                <div class="rr-rivi">
+                  <span class="rr-nimi">PORT</span>
+                  <div class="keinu" role="group" aria-label="PORT ENGINE BACKUP PANEL">
+                    <button type="button" data-engbackup="0" class="on">AUTO</button>
+                    <button type="button" data-engbackup="1">BACKUP</button>
+                  </div>
+                </div>
+                <label class="rr-saadin" for="rEngRpm0"><span>PORT RPM <output id="oEngRpm0">650</output></span>
+                  <input type="range" id="rEngRpm0" min="650" max="2500" step="10" value="650" disabled></label>
+              </div>
+              <div class="rr-kortti" data-puoli="1">
+                <div class="rr-rivi">
+                  <span class="rr-nimi">STBD</span>
+                  <div class="keinu" role="group" aria-label="STBD ENGINE BACKUP PANEL">
+                    <button type="button" data-engbackup="0" class="on">AUTO</button>
+                    <button type="button" data-engbackup="1">BACKUP</button>
+                  </div>
+                </div>
+                <label class="rr-saadin" for="rEngRpm1"><span>STBD RPM <output id="oEngRpm1">650</output></span>
+                  <input type="range" id="rEngRpm1" min="650" max="2500" step="10" value="650" disabled></label>
+              </div>
+              <p class="rr-huom">BACKUP-asennossa koneen kierrosluku seuraa säädintä eikä Vectorstickiä.</p>
+            </div>
+          </details>
+
+        </div>
+      </details>
+
+      <details id="lokiD" class="rr-ulko">
+        <summary>Loki ja purku <span id="lokiMaara" class="lukema">(0)</span></summary>
+        <div class="loki-ala">
+          <div class="loki-yla">
+            <span class="loki-selite">Kosketuksen arvio: alle 0,3 kn pehmeä, 0,3–0,6 kn tuntuva ja yli 0,6 kn kova.</span>
+            <button type="button" id="bLokiTyhjenna">Tyhjennä</button>
+          </div>
+          <ol id="loki" class="loki"></ol>
+          <p id="lokiTyhja" class="rr-huom">Ei merkintöjä. Kosketukset ja ohjauskäskyt kirjautuvat tähän.</p>
+        </div>
+      </details>
+
+      <section id="ohje" aria-label="Ohje">
+        <h2>Ohje</h2>
+        <p>Näppäimillä Q ja E käännetään tilleriä vasemmalle ja oikealle niin kauan kuin näppäin on pohjassa, ja S palauttaa tillerin keskelle. Nuoli ylös ja alas liikuttavat joystickia eteen ja taakse, vasen ja oikea nuoli sivuttain (vain DOCKING-tilassa), ja X palauttaa joystickin keskelle. D vaihtaa joystickin tilaa TRANSIT ja DOCKING välillä, välilyönti on CRASH STOP, P on tauko, R nollaa tilanteen ja 1, 2 ja 5 valitsevat aikakertoimen. Kaikki toiminnot löytyvät myös napeista.</p>
+        <p>DOCKING-tilassa joystick liikuttaa alusta eteen, taakse ja sivuttain, ja tiller kääntää keulaa. TRANSIT-tilassa joystick on kaasu, jolloin ensin kauha (reversing bucket) kääntyy ja sitten kierrosluku nousee, ja tiller toimii kuin ruori eli kääntää molempia ohjaussuuttimia (steering nozzle). Kuvaus noudattaa käsikirjan lukua 9.4.</p>
+        <p>Näkymän ruudukko on 5 m. Sininen viiva on pohjanopeuden (SOG) mukainen 10 sekunnin ennuste, ja vihreä tai punainen nuoli perässä on jetin työntö eteen tai taakse (15 kN vastaa 2,5 metriä). Punainen reunus rungon ympärillä tarkoittaa kosketusta ponttoniin. Liikemalli on kalibroimaton arvio.</p>
+      </section>
+
+    </section>
+  </main>
+</div>
+
+<script src="simulaattori/js/kasittely.js"></script>
+<script src="simulaattori/js/kasittelysivu.js"></script>
+</body>
+</html>

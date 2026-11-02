@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Kokoaa simulaattorin (index.html) ja Reittikartan (reittikartta.html) yksittäisiksi tiedostoiksi repon juureen.
+"""Kokoaa simulaattorin (index.html), Reittikartan (reittikartta.html) ja Repan käsittelyharjoituksen (kasittely.html) yksittäisiksi tiedostoiksi repon juureen.
 
 Kaikki tyylit ja skriptit upotetaan sivuun, jotta valmis sovellus on yksi tiedosto ilman asennuksia."""
 import pathlib
@@ -30,7 +30,8 @@ def inline(src_name):
 # SMPS-verkkosimulaattori (30.10.2026): molemmat sovellukset yhdeksi tiedostoksi repon juureen, josta Vercel julkaisee ne sellaisenaan.
 # Simulaattori on etusivu (index.html) ja Reittikartta sen rinnalla (reittikartta.html). Sama osoite, joten Reittikartan reitit
 # (selaimen localStorage, avain reittikartta.v1) näkyvät simulaattorin reittilistassa suoraan.
-for src, dst in (('simulaattori.html', 'index.html'), ('index.html', 'reittikartta.html')):
+# Käsittelyharjoitus (2.11.2026): Repan käsittelymallin 2D-testisivu omana tiedostonaan (kasittely.html).
+for src, dst in (('simulaattori.html', 'index.html'), ('index.html', 'reittikartta.html'), ('kasittely.html', 'kasittely.html')):
     html = inline(src)
     out = ROOT.parent / dst
     out.write_text(html, encoding='utf-8')

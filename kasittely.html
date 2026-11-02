@@ -1,0 +1,1717 @@
+<!doctype html>
+<!--
+  Repa – käsittelyharjoitus, 2D-testisivu (malli v0, kalibroimaton)
+  Copyright 2026 Jussi Vaahtikari
+  Lisenssi: PolyForm Noncommercial 1.0.0
+  https://polyformproject.org/licenses/noncommercial/1.0.0
+  Required Notice: Copyright 2026 Jussi Vaahtikari
+
+  Ei navigointikäyttöön. Käsittelymalli on kalibroimaton arvio, eikä se kuvaa oikean aluksen käyttäytymistä.
+-->
+<html lang="fi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#15324a">
+<title>Repa – käsittelyharjoitus</title>
+<style>
+/* Repan käsittelyharjoitus (kasittely.html). Väripaletti noudattaa simulaattorin sim.css:ää, Rolls-Roycen paneelit ovat tummia. */
+:root{--top-bg:#15324a;--top-ink:#e7eef3;--muted:#a9bccb;--panel:#1b3d58;--panel2:#244b69;--line:#35607f;--accent:#0f7fb3;--ok:#2aa55a;--bad:#d22a2a;--warn:#ffd400;--water:#2a6684;color-scheme:dark}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;overflow:hidden;background:#0d1a26;color:var(--top-ink);font:15px/1.35 "Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation;-webkit-tap-highlight-color:transparent;overscroll-behavior:none;-webkit-text-size-adjust:100%}
+button{font:inherit;color:inherit;cursor:pointer;touch-action:manipulation}
+button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible,[tabindex]:focus-visible{outline:2px solid #7cc4e8;outline-offset:2px}
+[hidden]{display:none !important}
+output{font-variant-numeric:tabular-nums}
+
+#app{display:flex;flex-direction:column;height:100%;height:100dvh;padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}
+
+/* ---------- Yläpalkki ---------- */
+#bar{position:relative;flex:none;z-index:60;background:var(--top-bg);padding:max(4px,env(safe-area-inset-top)) 8px 4px;display:flex;flex-direction:column;gap:2px}
+#otsikko{margin:0;padding:2px 2px 0;font-size:13px;font-weight:650;letter-spacing:.1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#rivi{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+#bar button,#bar select{min-height:44px;border:1px solid var(--line);border-radius:10px;background:var(--panel);padding:0 10px;font-weight:600;font-size:14px}
+#bar button:active{background:var(--panel2)}
+#bar button.on,.seg button.on{background:var(--accent);border-color:#5fc0ea;color:#fff}
+#bar button[aria-pressed=true]#bTauko{background:#8a5a00;border-color:#ffc94a}
+.seg{display:flex;gap:0}
+.seg button{border-radius:0 !important;min-width:44px;padding:0 8px !important}
+.seg button:first-child{border-radius:10px 0 0 10px !important}
+.seg button:last-child{border-radius:0 10px 10px 0 !important}
+.seg button+button{border-left-width:0 !important}
+#asetBtn{margin-left:auto;padding:0 10px}
+#aset{display:none;flex-direction:column;gap:6px;position:absolute;left:0;right:0;top:100%;background:var(--top-bg);padding:6px 10px 12px;border-bottom:1px solid var(--line);box-shadow:0 8px 16px rgba(0,0,0,.5)}
+#aset.auki{display:flex}
+/* Asetuslista puhelimessa: nimi ja lukema vasemmalla, säädin oikealla samalla rivillä, jotta lista ei peitä venettä */
+.fld{display:flex;flex-direction:row;align-items:center;gap:10px;font-size:13px;color:var(--muted)}
+.fld-nimi{display:flex;flex-direction:column;flex:0 0 112px;line-height:1.2}
+.fld-nimi output{color:#fff;font-weight:650}
+.fld select,.fld input[type=range]{flex:1;min-width:0}
+#bar select{font-size:16px;width:100%}
+input[type=range]{width:100%;height:44px;margin:0;accent-color:var(--accent);background:transparent}
+.kbd{display:none;opacity:.7;font-weight:500;margin-left:3px}
+@media (hover:hover) and (pointer:fine){.kbd{display:inline}}
+
+/* ---------- Asettelu: puhelin pystyssä, canvas ylhäällä ja ohjaimet sen alla ---------- */
+#main{flex:1;min-height:0;display:flex;flex-direction:column}
+#nakyma{position:relative;flex:none;height:45%;min-height:230px;overflow:hidden;background:var(--water);touch-action:none}
+#kanvas{position:absolute;left:0;top:0;width:100%;height:100%;display:block;touch-action:none;cursor:crosshair}
+#sivu{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:6px 8px calc(16px + env(safe-area-inset-bottom));background:#0d1a26}
+
+/* Mittarit canvasin päällä kulmissa (eivät nappaa kosketuksia) */
+.mittarit{position:absolute;top:6px;display:flex;flex-direction:column;gap:2px;pointer-events:none;z-index:5}
+.mittarit.vas{left:6px;width:104px}
+.mittarit.oik{right:6px;width:112px}
+.g{display:flex;flex-direction:column;background:rgba(10,22,32,.66);border-radius:6px;padding:1px 6px 2px;line-height:1.15}
+.gl{font-size:9.5px;letter-spacing:.3px;color:#b9cddb;text-transform:uppercase}
+.gv{font:700 14px/1.15 ui-monospace,Menlo,Consolas,monospace;color:#fff;white-space:nowrap}
+.g.vaara .gv{color:#ff6b6b}
+.g.varoitus{background:rgba(120,20,20,.8)}
+#taukoMerkki{position:absolute;left:50%;top:70px;transform:translateX(-50%);padding:4px 14px;border-radius:8px;background:rgba(138,90,0,.9);border:1px solid #ffc94a;font-weight:700;letter-spacing:1px;pointer-events:none;z-index:6}
+#toast{position:absolute;left:8px;right:8px;bottom:58px;margin:0 auto;max-width:420px;padding:8px 12px;border-radius:10px;background:rgba(30,10,10,.92);border:1px solid #ff8a8a;color:#fff;font-size:14px;text-align:center;pointer-events:none;z-index:8}
+.nakyma-napit{position:absolute;bottom:6px;display:flex;z-index:7}
+.nakyma-napit.vas{left:6px}
+.nakyma-napit.oik{right:6px}
+.nakyma-napit button{min-height:44px;min-width:44px;padding:0 10px;border:1px solid rgba(255,255,255,.28);background:rgba(10,22,32,.72);font-weight:650;font-size:14px}
+.nakyma-napit button+button{border-left-width:0}
+.nakyma-napit button:first-child{border-radius:10px 0 0 10px}
+.nakyma-napit button:last-child{border-radius:0 10px 10px 0}
+.nakyma-napit button.on{background:var(--accent);border-color:#5fc0ea}
+.nakyma-napit button:active{background:var(--panel2)}
+#bZoomUt,#bZoomIn{font-size:22px;line-height:1;min-width:48px}
+
+/* ---------- Ohjaimet ---------- */
+#ohjaimet{display:grid;grid-template-columns:minmax(0,1fr) 84px minmax(0,1fr);gap:6px;margin-bottom:10px}
+.laatikko{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:6px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.ots{display:flex;justify-content:space-between;align-items:baseline;gap:4px;font-size:12px;min-height:18px}
+.ots b{font-size:12px;letter-spacing:.5px}
+.ots output{color:#cfe7f5;font-size:12px;font-weight:600;white-space:nowrap}
+.laatikko button{min-height:44px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);font-weight:600;font-size:13px;padding:0 6px}
+.laatikko button:active{background:var(--accent)}
+.valinta{display:flex;align-items:center;gap:6px;min-height:44px;font-size:12px;color:var(--muted);line-height:1.2}
+.valinta input{width:22px;height:22px;flex:none;margin:0;accent-color:var(--accent)}
+
+/* TILLER: vaakasuuntainen vipu */
+.raide{position:relative;height:64px;border-radius:12px;background:#0f2538;border:1px solid var(--line);touch-action:none;cursor:ew-resize}
+.raide .uurre{position:absolute;left:22px;right:22px;top:50%;height:6px;margin-top:-3px;border-radius:3px;background:#2a4a63}
+.raide .keskitikki{position:absolute;left:50%;top:10px;bottom:10px;width:2px;margin-left:-1px;background:#7fa4bd;opacity:.7}
+.nuppi{position:absolute;width:46px;height:54px;top:50%;left:0;margin-top:-27px;border-radius:12px;background:linear-gradient(#e8eef2,#aeb9c1);border:2px solid #5c6b76;box-shadow:0 2px 6px rgba(0,0,0,.5);pointer-events:none}
+.raide.veto .nuppi,.kentta.veto .nuppi{background:linear-gradient(#fff,#cfe7f5);border-color:#7cc4e8}
+.asteikko{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:-3px;padding:0 4px}
+
+/* Keskipalsta: CRASH STOP ja TRANSIT/DOCKING */
+.keski{display:flex;flex-direction:column;gap:6px;min-width:0}
+.crash{flex:1;min-height:92px;border-radius:12px;border:2px solid #ffb4b4;background:linear-gradient(#e03030,#a01414);color:#fff;font-weight:800;font-size:13px;letter-spacing:.5px;line-height:1.1;padding:4px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;box-shadow:0 2px 8px rgba(0,0,0,.5)}
+.crash:active{background:linear-gradient(#ff5050,#c01c1c)}
+.tilat{display:flex;flex-direction:column;gap:4px}
+.tilat button{min-height:44px;border:1px solid var(--line);border-radius:10px;background:var(--panel);font-weight:700;font-size:11px;letter-spacing:.2px;padding:0 2px}
+.tilat button.on{background:var(--accent);border-color:#5fc0ea;color:#fff}
+
+/* JOYSTICK: kaksiakselinen alue */
+.kentta{position:relative;width:100%;aspect-ratio:1/1;border-radius:14px;background:#0f2538;border:1px solid var(--line);touch-action:none;cursor:grab;overflow:hidden}
+.kentta .risti{position:absolute;inset:0;background:linear-gradient(#7fa4bd,#7fa4bd) center/2px 76% no-repeat,linear-gradient(#7fa4bd,#7fa4bd) center/76% 2px no-repeat;opacity:.55}
+.kentta .rako{display:none;position:absolute;left:50%;top:8%;bottom:8%;width:14px;margin-left:-7px;border-radius:7px;background:#2a4a63}
+.kentta.transit .risti{background:linear-gradient(#7fa4bd,#7fa4bd) center/2px 0 no-repeat}
+.kentta.transit .rako{display:block}
+.kentta .nuppi{width:50px;height:50px;top:0;left:0;margin-top:0;border-radius:50%}
+
+/* ---------- Avattavat osiot ---------- */
+.rr-ulko{margin-bottom:8px;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+.rr-ulko>summary{padding:0 12px;font-weight:650}
+summary{min-height:44px;display:flex;align-items:center;gap:8px;cursor:pointer;list-style:none;touch-action:manipulation}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"";margin-left:auto;width:9px;height:9px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg);transition:transform .15s;opacity:.7;flex:none}
+details[open]>summary::after{transform:rotate(-135deg)}
+.lukema{color:var(--muted);font-weight:500}
+.rr-sisus{padding:0 8px 8px;display:flex;flex-direction:column;gap:6px}
+
+/* Rolls-Roycen paneelit: musta ja harmaa tausta, valkoinen teksti */
+.rr{background:#161616;border:1px solid #444;border-radius:10px;color:#fff}
+.rr>summary{padding:0 12px;font-weight:700;font-size:13px;letter-spacing:.4px}
+.rr-runko{padding:2px 10px 10px;display:flex;flex-direction:column;gap:8px}
+.rr-rivi{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.rr-nimi{font-weight:700;letter-spacing:.5px;min-width:42px}
+.rr-kortti{border:1px solid #333;border-radius:8px;padding:6px 8px;display:flex;flex-direction:column;gap:4px;background:#1d1d1d}
+.keinu{display:flex}
+.keinu button,.backflush,.rr button{min-height:44px;min-width:60px;padding:0 10px;border:1px solid #666;background:#2c2c2c;color:#fff;font-weight:700;font-size:12px;letter-spacing:.3px}
+.keinu button:first-child{border-radius:8px 0 0 8px}
+.keinu button:last-child{border-radius:0 8px 8px 0}
+.keinu button+button{border-left-width:0}
+.keinu button.on{background:#3b7f3b;border-color:#8bd88b}
+.keinu button[data-clutch="0"].on,.keinu button[data-backup="1"].on,.keinu button[data-engbackup="1"].on,.keinu button[data-trimauto="0"].on,.keinu button[data-int="1"].on{background:#9a6b00;border-color:#ffc94a}
+.backflush{border-radius:8px !important;margin-left:auto}
+.backflush.vilkkuu{animation:vilkku .5s steps(2,start) infinite;background:#0f6fa0;border-color:#8fd4f5}
+@keyframes vilkku{50%{background:#2c2c2c;border-color:#666}}
+.rr-saadin{display:flex;flex-direction:column;font-size:12px;color:#ddd;gap:0}
+.rr-saadin>span{display:flex;justify-content:space-between;font-weight:600;letter-spacing:.3px}
+.rr-saadin output{color:#fff}
+.rr-saadin input[disabled]{opacity:.45}
+.rr-huom{margin:0;font-size:12px;color:#aab;line-height:1.35}
+.viesti{margin:0;min-height:0;font-size:13px;color:#ffb0b0;font-weight:650}
+.viesti:empty{display:none}
+
+/* LCD DISPLAY AND ALARM PANEL (käsikirjan kuva 13) */
+.lcd{background:#050805;border:2px solid #555;border-radius:8px;padding:8px 10px 10px;color:#9dffa0;font-family:ui-monospace,Menlo,Consolas,monospace}
+.lcd-ylaosa{display:flex;justify-content:space-between;align-items:center;gap:6px;margin-bottom:6px;min-height:20px}
+.lcd-nimi{font-weight:800;letter-spacing:1px;color:#e8ffe9;font-size:13px}
+.lcd-lamput{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
+.lamppu{font-size:9.5px;font-weight:700;padding:1px 5px;border-radius:3px;background:#3a3a00;color:#ffe34d;border:1px solid #7a7a00}
+.lamppu.hael{background:#400;color:#ff8a8a;border-color:#a33}
+.lcd-palkit{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.vp{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0}
+.vp-raide{position:relative;width:26px;height:96px;border:1px solid #3d6b40;background:#0b140b}
+.vp-raide::before{content:"";position:absolute;left:-5px;right:-5px;top:50%;height:1px;background:#6c9b6f}
+.vp-raide.tab::before{display:none}
+.vp-raide i{position:absolute;left:1px;right:1px;background:#37e03d;height:0;bottom:50%}
+.vp-raide.tab i{bottom:0}
+.vp-raide i.taakse{background:#ff5a4d}
+.vp-nimi{font-size:9.5px;text-align:center;line-height:1.1;color:#cfe;white-space:nowrap}
+.vp-arvo{font-size:11px;color:#fff;min-height:14px}
+.lcd-vaaka{display:flex;flex-direction:column;gap:5px;margin-top:8px}
+.hp{display:grid;grid-template-columns:78px 1fr 46px;align-items:center;gap:6px}
+.hp-nimi{font-size:9.5px;color:#cfe}
+.hp-raide{position:relative;height:16px;border:1px solid #3d6b40;background:#0b140b}
+.hp-raide::before{content:"";position:absolute;top:-3px;bottom:-3px;left:50%;width:1px;background:#6c9b6f}
+.hp-raide i{position:absolute;top:1px;bottom:1px;left:50%;width:0;background:#37e03d}
+.hp-arvo{font-size:11px;color:#fff;text-align:right}
+.lcd-rpm{display:flex;justify-content:space-between;margin-top:8px;font-size:12px;color:#cfe}
+.lcd-rpm b{color:#fff;font-size:14px;margin-left:4px}
+
+/* Loki */
+.loki-ala{padding:0 10px 10px;display:flex;flex-direction:column;gap:6px}
+.loki-yla{display:flex;align-items:center;gap:8px;justify-content:space-between}
+.loki-selite{font-size:12px;color:var(--muted);flex:1}
+#bLokiTyhjenna{min-height:44px;min-width:84px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);font-weight:600}
+.loki{list-style:none;margin:0;padding:0;max-height:260px;overflow-y:auto;border-radius:8px;background:#0d1a26}
+.loki li{display:flex;flex-wrap:wrap;gap:2px 8px;align-items:baseline;padding:6px 8px;border-bottom:1px solid #1f3a50;font-size:13px}
+.loki .lt{font-family:ui-monospace,Menlo,Consolas,monospace;color:var(--muted);min-width:44px}
+.loki .lk{font-weight:650}
+.loki .lv{font-family:ui-monospace,Menlo,Consolas,monospace}
+.loki .arvio{padding:0 7px;border-radius:9px;font-size:12px;font-weight:700;color:#10202c}
+.arvio.pehmea{background:#7ee2a0}
+.arvio.tuntuva{background:#ffd966}
+.arvio.kova{background:#ff7b7b}
+#lokiTyhja{padding:4px 2px}
+
+/* ---------- Ohje ---------- */
+#ohje{margin-top:4px;padding:4px 4px 8px;color:var(--muted);font-size:13px;line-height:1.5}
+#ohje h2{font-size:14px;color:var(--top-ink);margin:4px 0}
+#ohje p{margin:0 0 8px}
+
+/* ---------- Leveä näyttö: canvas vasemmalla, ohjaimet, paneelit ja loki oikealla ---------- */
+@media (min-width:800px){
+  #bar{flex-direction:row;align-items:center;flex-wrap:wrap;gap:6px 14px;padding:6px 12px}
+  #otsikko{font-size:14px;padding:0}
+  #asetBtn{display:none}
+  #aset{display:flex !important;flex-direction:row;align-items:center;position:static;padding:0;border:0;box-shadow:none;gap:10px;background:none;margin-left:auto}
+  .fld{gap:6px}
+  .fld-nimi{flex:none;flex-direction:row;gap:6px}
+  .fld input[type=range]{flex:none;width:92px}
+  #bar select{flex:none;width:auto;min-width:0;padding:0 8px}
+  #main{flex-direction:row}
+  #nakyma{flex:1;height:auto;min-height:0}
+  #sivu{flex:none;width:min(470px,42vw);min-width:380px;border-left:1px solid var(--line)}
+  .mittarit.vas{width:130px}
+  .mittarit.oik{width:140px}
+  .gv{font-size:16px}
+  .kentta{max-width:220px;margin:0 auto}
+}
+/* Matala leveä näyttö (puhelin vaakasuunnassa): tiivis yläpalkki */
+@media (min-width:800px) and (max-height:520px){
+  #bar{padding-top:max(3px,env(safe-area-inset-top));padding-bottom:3px}
+  #bar button,#bar select{min-height:44px}
+  #otsikko{font-size:13px}
+}
+@media (max-width:359px){
+  #ohjaimet{grid-template-columns:minmax(0,1fr) 76px minmax(0,1fr)}
+  .mittarit.vas{width:96px}
+  .mittarit.oik{width:100px}
+}
+
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- Yläpalkki -->
+  <header id="bar">
+    <h1 id="otsikko">Repa – käsittelyharjoitus (malli v0, kalibroimaton)</h1>
+    <div id="rivi">
+      <button type="button" id="bTauko" aria-pressed="false" title="Tauko (P)">Tauko <span class="kbd">(P)</span></button>
+      <div class="seg" id="segNopeus" role="group" aria-label="Aikakerroin">
+        <button type="button" data-v="1" class="on" aria-pressed="true" title="Aikakerroin 1x (näppäin 1)">1x</button>
+        <button type="button" data-v="2" aria-pressed="false" title="Aikakerroin 2x (näppäin 2)">2x</button>
+        <button type="button" data-v="5" aria-pressed="false" title="Aikakerroin 5x (näppäin 5)">5x</button>
+      </div>
+      <button type="button" id="bNollaa" title="Nollaa lähtötilanteeseen (R)">Nollaa <span class="kbd">(R)</span></button>
+      <button type="button" id="asetBtn" aria-expanded="false" aria-controls="aset" title="Lähtötilanne ja tuuli">Asetukset</button>
+    </div>
+    <div id="aset">
+      <label class="fld" for="selTilanne"><span class="fld-nimi">Lähtötilanne</span>
+        <select id="selTilanne">
+          <option value="lahestyminen">Lähestyminen</option>
+          <option value="kylki">Kylki ponttonissa</option>
+          <option value="vapaa">Vapaa vesi</option>
+        </select>
+      </label>
+      <label class="fld" for="rTuuliSuunta"><span class="fld-nimi">Tuuli mistä <output id="oTuuliSuunta">0°</output></span>
+        <input type="range" id="rTuuliSuunta" min="0" max="359" step="1" value="0">
+      </label>
+      <label class="fld" for="rTuuliNopeus"><span class="fld-nimi">Tuulen nopeus <output id="oTuuliNopeus">tyyni</output></span>
+        <input type="range" id="rTuuliNopeus" min="0" max="14" step="0.5" value="0">
+      </label>
+    </div>
+  </header>
+
+  <main id="main">
+
+    <!-- Ylhäältä nähty käsittelynäkymä -->
+    <section id="nakyma" aria-label="Ylhäältä nähty käsittelynäkymä">
+      <canvas id="kanvas" role="img" aria-label="Repa ja kelluva ponttoni ylhäältä nähtynä"></canvas>
+      <div class="mittarit vas" id="mitVas" aria-label="Mittarit">
+        <div class="g"><span class="gl">HDG</span><span class="gv" id="gHdg">000°</span></div>
+        <div class="g"><span class="gl">SOG</span><span class="gv" id="gSog">0,0 kn</span></div>
+        <div class="g"><span class="gl">STW u</span><span class="gv" id="gU">0,0 kn</span></div>
+        <div class="g"><span class="gl">STW v</span><span class="gv" id="gV">0,0 kn</span></div>
+        <div class="g"><span class="gl">Kääntyminen</span><span class="gv" id="gR">0,0 °/s</span></div>
+      </div>
+      <div class="mittarit oik" id="mitOik" aria-label="Mittarit">
+        <div class="g" id="gEtaisyysLaatikko"><span class="gl">Etäisyys</span><span class="gv" id="gEtaisyys">–</span></div>
+        <div class="g"><span class="gl">Tuuli</span><span class="gv" id="gTuuli">tyyni</span></div>
+        <div class="g"><span class="gl">Aika</span><span class="gv" id="gAika">0:00</span></div>
+        <div class="g" id="gKosketusLaatikko"><span class="gl">Kosketukset</span><span class="gv" id="gKosketus">0</span></div>
+      </div>
+      <div id="taukoMerkki" hidden>TAUKO</div>
+      <div id="toast" role="status" aria-live="polite" hidden></div>
+      <div class="nakyma-napit vas" role="group" aria-label="Näkymän suunta">
+        <button type="button" data-n="pohjoinen" class="on" aria-pressed="true">Pohjoinen ylös</button>
+        <button type="button" data-n="keula" aria-pressed="false">Keula ylös</button>
+      </div>
+      <div class="nakyma-napit oik" role="group" aria-label="Zoom">
+        <button type="button" id="bZoomUt" aria-label="Loitonna" title="Loitonna">−</button>
+        <button type="button" id="bZoomIn" aria-label="Lähennä" title="Lähennä">+</button>
+      </div>
+    </section>
+
+    <!-- Ohjaimet, paneelit, loki ja ohje -->
+    <section id="sivu" aria-label="Ohjaimet">
+
+      <div id="ohjaimet">
+        <div class="laatikko" id="tillerLaatikko">
+          <div class="ots"><b>TILLER</b> <output id="oTiller">0 %</output></div>
+          <div id="tillerRaide" class="raide" role="slider" tabindex="0" aria-label="TILLER" aria-valuemin="-100" aria-valuemax="100" aria-valuenow="0">
+            <span class="uurre"></span><span class="keskitikki"></span><span id="tillerNuppi" class="nuppi"></span>
+          </div>
+          <div class="asteikko" aria-hidden="true"><span>−100</span><span>0</span><span>+100</span></div>
+          <button type="button" id="bTillerKeskelle" title="Tiller keskelle (S)">Keskelle <span class="kbd">(S)</span></button>
+          <label class="valinta"><input type="checkbox" id="cbJousi"><span>Tiller jousipalautus</span></label>
+        </div>
+
+        <div class="keski">
+          <button type="button" id="bCrash" class="crash" title="CRASH STOP (välilyönti)">CRASH STOP<span class="kbd">(välilyönti)</span></button>
+          <div class="tilat" role="group" aria-label="Joystickin valintakytkin">
+            <button type="button" data-tila="TRANSIT" aria-pressed="false" title="TRANSIT: joystick on kaasu">TRANSIT</button>
+            <button type="button" data-tila="DOCKING" aria-pressed="true" class="on" title="DOCKING: joystick liikuttaa alusta (D vaihtaa tilaa)">DOCKING</button>
+          </div>
+        </div>
+
+        <div class="laatikko" id="joyLaatikko">
+          <div class="ots"><b>JOYSTICK</b> <output id="oJoy">0 / 0</output></div>
+          <div id="joyKentta" class="kentta" role="application" tabindex="0" aria-label="JOYSTICK">
+            <span class="risti"></span><span class="rako"></span><span id="joyNuppi" class="nuppi"></span>
+          </div>
+          <button type="button" id="bJoyKeskelle" title="Joystick keskelle (X)">Keskelle <span class="kbd">(X)</span></button>
+        </div>
+      </div>
+
+      <details id="paneelit" class="rr-ulko">
+        <summary>Paneelit</summary>
+        <div class="rr-sisus">
+
+          <details class="rr" id="pLcd" open>
+            <summary>LCD DISPLAY AND ALARM PANEL</summary>
+            <div class="rr-runko">
+              <div class="lcd" id="lcd">
+                <div class="lcd-ylaosa"><span class="lcd-nimi">VECTOR Controls</span><span class="lcd-lamput" id="lcdLamput"></span></div>
+                <div class="lcd-palkit">
+                  <div class="vp"><b class="vp-arvo" id="lcdV0">0 %</b><div class="vp-raide tab"><i id="lcdF0"></i></div><span class="vp-nimi">PORT TAB</span></div>
+                  <div class="vp"><b class="vp-arvo" id="lcdV1">0 %</b><div class="vp-raide"><i id="lcdF1"></i></div><span class="vp-nimi">PORT BUCKET</span></div>
+                  <div class="vp"><b class="vp-arvo" id="lcdV2">0 %</b><div class="vp-raide"><i id="lcdF2"></i></div><span class="vp-nimi">STBD BUCKET</span></div>
+                  <div class="vp"><b class="vp-arvo" id="lcdV3">0 %</b><div class="vp-raide tab"><i id="lcdF3"></i></div><span class="vp-nimi">STBD TAB</span></div>
+                </div>
+                <div class="lcd-vaaka">
+                  <div class="hp"><span class="hp-nimi">PORT NOZZLE</span><div class="hp-raide"><i id="lcdF4"></i></div><b class="hp-arvo" id="lcdV4">0,0°</b></div>
+                  <div class="hp"><span class="hp-nimi">STBD NOZZLE</span><div class="hp-raide"><i id="lcdF5"></i></div><b class="hp-arvo" id="lcdV5">0,0°</b></div>
+                </div>
+                <div class="lcd-rpm"><span>PORT RPM <b id="lcdRpm0">650</b></span><span>STBD RPM <b id="lcdRpm1">650</b></span></div>
+              </div>
+            </div>
+          </details>
+
+          <details class="rr" id="pClutch">
+            <summary>CLUTCH PANEL</summary>
+            <div class="rr-runko">
+              <div class="rr-rivi" data-puoli="0">
+                <span class="rr-nimi">PORT</span>
+                <div class="keinu" role="group" aria-label="PORT kytkin">
+                  <button type="button" data-clutch="1" class="on">ENGAGE</button>
+                  <button type="button" data-clutch="0">DISENG</button>
+                </div>
+                <button type="button" class="backflush" data-bf="0">BACKFLUSH</button>
+              </div>
+              <div class="rr-rivi" data-puoli="1">
+                <span class="rr-nimi">STBD</span>
+                <div class="keinu" role="group" aria-label="STBD kytkin">
+                  <button type="button" data-clutch="1" class="on">ENGAGE</button>
+                  <button type="button" data-clutch="0">DISENG</button>
+                </div>
+                <button type="button" class="backflush" data-bf="1">BACKFLUSH</button>
+              </div>
+              <label class="rr-saadin" for="rIdle"><span>IDLE <output id="oIdle">650 rpm</output></span>
+                <input type="range" id="rIdle" min="650" max="1100" step="10" value="650">
+              </label>
+              <p class="viesti" id="clutchViesti" role="status"></p>
+              <p class="rr-huom">ENGAGE onnistuu vain, kun JOYSTICK on keskellä. BACKFLUSH vilkkuu kolme sekuntia, mutta se ei vaikuta malliin.</p>
+            </div>
+          </details>
+
+          <details class="rr" id="pTrim">
+            <summary>TRIM–ROLL PANEL</summary>
+            <div class="rr-runko">
+              <div class="rr-rivi">
+                <span class="rr-nimi">TAB</span>
+                <div class="keinu" role="group" aria-label="TRIM–ROLL PANEL AUTO tai BACKUP">
+                  <button type="button" data-trimauto="1" class="on">AUTO</button>
+                  <button type="button" data-trimauto="0">BACKUP</button>
+                </div>
+              </div>
+              <label class="rr-saadin" for="rTrim"><span>TRIM</span><input type="range" id="rTrim" min="-100" max="100" value="0" disabled></label>
+              <label class="rr-saadin" for="rRoll"><span>ROLL</span><input type="range" id="rRoll" min="-100" max="100" value="0" disabled></label>
+              <p class="rr-huom">TRIM- ja ROLL-säätimet ovat vain näyttönä. AUTO-asennossa interceptorit (TAB) seuraavat nopeutta, ja BACKUP-asennossa ne pysyvät paikallaan.</p>
+            </div>
+          </details>
+
+          <details class="rr" id="pBackup">
+            <summary>BACKUP PANEL</summary>
+            <div class="rr-runko">
+              <div class="rr-kortti" data-puoli="0">
+                <div class="rr-rivi">
+                  <span class="rr-nimi">PORT</span>
+                  <div class="keinu" role="group" aria-label="PORT BACKUP PANEL">
+                    <button type="button" data-backup="0" class="on">AUTO</button>
+                    <button type="button" data-backup="1">BACKUP</button>
+                  </div>
+                  <div class="keinu" role="group" aria-label="PORT INT tai WJ">
+                    <button type="button" data-int="0" class="on">WJ</button>
+                    <button type="button" data-int="1">INT</button>
+                  </div>
+                </div>
+                <label class="rr-saadin" for="rBkNoz0"><span>PORT NOZZLE <output id="oBkNoz0">0°</output></span>
+                  <input type="range" id="rBkNoz0" min="-30" max="30" step="1" value="0" disabled></label>
+                <label class="rr-saadin" for="rBkKau0"><span id="lBkKau0">PORT BUCKET <output id="oBkKau0">0 %</output></span>
+                  <input type="range" id="rBkKau0" min="-100" max="100" step="1" value="0" disabled></label>
+              </div>
+              <div class="rr-kortti" data-puoli="1">
+                <div class="rr-rivi">
+                  <span class="rr-nimi">STBD</span>
+                  <div class="keinu" role="group" aria-label="STBD BACKUP PANEL">
+                    <button type="button" data-backup="0" class="on">AUTO</button>
+                    <button type="button" data-backup="1">BACKUP</button>
+                  </div>
+                  <div class="keinu" role="group" aria-label="STBD INT tai WJ">
+                    <button type="button" data-int="0" class="on">WJ</button>
+                    <button type="button" data-int="1">INT</button>
+                  </div>
+                </div>
+                <label class="rr-saadin" for="rBkNoz1"><span>STBD NOZZLE <output id="oBkNoz1">0°</output></span>
+                  <input type="range" id="rBkNoz1" min="-30" max="30" step="1" value="0" disabled></label>
+                <label class="rr-saadin" for="rBkKau1"><span id="lBkKau1">STBD BUCKET <output id="oBkKau1">0 %</output></span>
+                  <input type="range" id="rBkKau1" min="-100" max="100" step="1" value="0" disabled></label>
+              </div>
+              <p class="rr-huom">BACKUP-asennossa liukusäätimet ohittavat Vectorstickin. WJ ohjaa kauhaa (BUCKET) ja INT interceptoria (TAB), jolloin vain positiivinen arvo vaikuttaa.</p>
+            </div>
+          </details>
+
+          <details class="rr" id="pEngine">
+            <summary>ENGINE BACKUP PANEL</summary>
+            <div class="rr-runko">
+              <div class="rr-kortti" data-puoli="0">
+                <div class="rr-rivi">
+                  <span class="rr-nimi">PORT</span>
+                  <div class="keinu" role="group" aria-label="PORT ENGINE BACKUP PANEL">
+                    <button type="button" data-engbackup="0" class="on">AUTO</button>
+                    <button type="button" data-engbackup="1">BACKUP</button>
+                  </div>
+                </div>
+                <label class="rr-saadin" for="rEngRpm0"><span>PORT RPM <output id="oEngRpm0">650</output></span>
+                  <input type="range" id="rEngRpm0" min="650" max="2500" step="10" value="650" disabled></label>
+              </div>
+              <div class="rr-kortti" data-puoli="1">
+                <div class="rr-rivi">
+                  <span class="rr-nimi">STBD</span>
+                  <div class="keinu" role="group" aria-label="STBD ENGINE BACKUP PANEL">
+                    <button type="button" data-engbackup="0" class="on">AUTO</button>
+                    <button type="button" data-engbackup="1">BACKUP</button>
+                  </div>
+                </div>
+                <label class="rr-saadin" for="rEngRpm1"><span>STBD RPM <output id="oEngRpm1">650</output></span>
+                  <input type="range" id="rEngRpm1" min="650" max="2500" step="10" value="650" disabled></label>
+              </div>
+              <p class="rr-huom">BACKUP-asennossa koneen kierrosluku seuraa säädintä eikä Vectorstickiä.</p>
+            </div>
+          </details>
+
+        </div>
+      </details>
+
+      <details id="lokiD" class="rr-ulko">
+        <summary>Loki ja purku <span id="lokiMaara" class="lukema">(0)</span></summary>
+        <div class="loki-ala">
+          <div class="loki-yla">
+            <span class="loki-selite">Kosketuksen arvio: alle 0,3 kn pehmeä, 0,3–0,6 kn tuntuva ja yli 0,6 kn kova.</span>
+            <button type="button" id="bLokiTyhjenna">Tyhjennä</button>
+          </div>
+          <ol id="loki" class="loki"></ol>
+          <p id="lokiTyhja" class="rr-huom">Ei merkintöjä. Kosketukset ja ohjauskäskyt kirjautuvat tähän.</p>
+        </div>
+      </details>
+
+      <section id="ohje" aria-label="Ohje">
+        <h2>Ohje</h2>
+        <p>Näppäimillä Q ja E käännetään tilleriä vasemmalle ja oikealle niin kauan kuin näppäin on pohjassa, ja S palauttaa tillerin keskelle. Nuoli ylös ja alas liikuttavat joystickia eteen ja taakse, vasen ja oikea nuoli sivuttain (vain DOCKING-tilassa), ja X palauttaa joystickin keskelle. D vaihtaa joystickin tilaa TRANSIT ja DOCKING välillä, välilyönti on CRASH STOP, P on tauko, R nollaa tilanteen ja 1, 2 ja 5 valitsevat aikakertoimen. Kaikki toiminnot löytyvät myös napeista.</p>
+        <p>DOCKING-tilassa joystick liikuttaa alusta eteen, taakse ja sivuttain, ja tiller kääntää keulaa. TRANSIT-tilassa joystick on kaasu, jolloin ensin kauha (reversing bucket) kääntyy ja sitten kierrosluku nousee, ja tiller toimii kuin ruori eli kääntää molempia ohjaussuuttimia (steering nozzle). Kuvaus noudattaa käsikirjan lukua 9.4.</p>
+        <p>Näkymän ruudukko on 5 m. Sininen viiva on pohjanopeuden (SOG) mukainen 10 sekunnin ennuste, ja vihreä tai punainen nuoli perässä on jetin työntö eteen tai taakse (15 kN vastaa 2,5 metriä). Punainen reunus rungon ympärillä tarkoittaa kosketusta ponttoniin. Liikemalli on kalibroimaton arvio.</p>
+      </section>
+
+    </section>
+  </main>
+</div>
+
+<script>
+/* Simulaattori – Repan käsittelymalli (vaihe K1, 2.11.2026): kolmen vapausasteen liikemalli hitaaseen ajoon ja laituriin ajoon.
+ *
+ * Tämä on erillinen malli, jota käsittelyharjoitus käyttää liike.js:n sijaan. liike.js on navigoijan harjoituksen kinemaattinen
+ * malli (ruorimies toteuttaa suunta- ja nopeuskäskyt). Tässä pelaaja on itse ruorimies ja ohjaa Rolls-Roycen Vectorstick-järjestelmää:
+ * TILLER (keulasuunta) ja JOYSTICK, jonka valintakytkin on asennossa TRANSIT (joystick on kaasu) tai DOCKING (joystick liikuttaa
+ * alusta eteen, taakse ja sivuttain, tiller kääntää keulaa). Käsikirja 25.6.2014 luvut 9.4 ja 9.5.
+ *
+ * Liikeyhtälöt (runkokoordinaatisto: x keulaan, y oikealle, kääntyminen myötäpäivään positiivinen; Fossen, 3 DOF):
+ *   (m + mx) du/dt = X_runko + X_jetit + X_tuuli + X_kosketus + m v r
+ *   (m + my) dv/dt = Y_runko + Y_jetit + Y_tuuli + Y_kosketus - m u r
+ *   (Iz + Jz) dr/dt = N_runko + N_jetit + N_tuuli + N_kosketus
+ * u = pitkittäisnopeus (surge), v = poikittaisnopeus (sway, + oikealle), r = kääntymisnopeus (yaw, rad/s). Nopeudet ovat nopeuksia
+ * veden suhteen (STW); virtaus (vesimassan nopeus) lisätään paikan integrointiin, SOG- ja COG-funktioihin ja kosketuksen nopeuteen,
+ * joten virtaus voidaan ottaa mukaan myöhemmin pelkällä setCurrent-kutsulla (tuulen näennäinen tuuli lasketaan vielä STW:stä). Tuuli on mukana liike.js:n tapaan (näennäinen tuuli, sivu- ja keulaprofiili) ja
+ * lisäksi kääntömomenttina, koska tuulen painekeskiö on vedenalaisen sivupinnan keskiön edessä (keula kaatuu myötätuuleen).
+ *
+ * Runkovoimat hitaassa ajossa ovat poikkivirtausvastusta (cross-flow drag, Hooft): runko jaetaan pitkittäin kaistoihin, joilla on
+ * runkomallin mittataulukosta (runko.js, hull_offsets) laskettu syväys, ja jokaisen kaistan poikittaisnopeus v + x r antaa voiman
+ * -1/2 rho Cd T(x) dx (v + x r) |v + x r|. Tämä tuottaa yhtä aikaa sway-vastuksen, kääntövaimennuksen ja niiden kytkennän oikealla
+ * vaikutuspisteellä (vedenalaisen sivupinnan keskiö 4,76 m peräpeilistä, painopiste 3,78 m). Vauhdissa lisätään lineaariset
+ * nostovoimatermit (Yv, Yr, Nv, Nr kertaa |u|, Clarken ym. 1983 regressiokaavat), jotka antavat kurssivakavuuden ja kaarevan
+ * käännöksen: ilman niitä suuttimen sivuvoima pyöräyttäisi veneen paikallaan myös vauhdissa. Pitkittäisvastus on liike.js:n liukukynnyskäyrä ilman sen keinotekoista hitaan
+ * nopeuden termiä: 14 tonnin vene ei pysähdy itsestään, vaan kauhalla.
+ *
+ * Hydrostatiikka runkomallista suunnitteluvesiviivalla (Ta 0,942 m, Tf 0,615 m): uppouma 14,16 m3, LCB 3,78 m peräpeilistä
+ * (painoarvion lastattu painopiste 4,984 m on perän referenssistä 1,208 m peräpeilin takaa, eli sama 3,78 m), Lwl 10,75 m,
+ * Bwl 3,81 m, vedenalainen sivupinta 8,07 m2, vesiviivapinta 31 m2. Operointipaino 14 t (perehdytysmateriaali).
+ *
+ * Vesijetit (2 x Rolls-Royce FF340): kummallakin kierrosluku n, kauha b ja ohjaussuutin delta. Suihkun liikemäärätyöntö T = Tb (n/nmax)^2,
+ * paaluveto noin 3 000 kg eli 15 kN jettiä kohti (perehdytys). Kauha b = +1 täysin ylhäällä (koko suihku taakse, täysi eteenpäin-
+ * työntö), b = 0 neutraali eli nettotyöntö nolla (suihku jaettu, LCD:n keskiasento), b = -1 täysi peruutus. Peruutustyöntö on
+ * paikallaan noin 60 % eteenpäin-työnnöstä (reverseEff, oletus) ja kasvaa vauhdissa, koska kauha kääntää myös rungon mukana
+ * tulevan virtauksen (crash stop 28 kn:sta noin 40 m, käsikirja 9.4.5, kalibroitu reverseSpeedGain-kertoimella). Suuttimen
+ * kääntö delta (+ = suihku oikealle, enintään nozzleMaxDeg 30°, oletus) antaa sivuvoiman -T sin(delta) kertaa kauhakerroin
+ * 0,8 + 0,2 b: neutraalissakin kauhassa suihku on olemassa ja ohjaa (siksi IDLE-säädin lisää ohjausvoimaa, käsikirja 9.4.4).
+ * Sivuvoiman merkki ei vaihdu peruutettaessa (kauha kääntää virtauksen eteen ja alas, ei toiselle sivulle), joten sama suuttimen
+ * asento kääntää keulaa samaan suuntaan eteen- ja taaksepäin ajossa; tämä on oletus, joka tarkistetaan veneellä.
+ * Työnnön vaikutuspiste on suutin peräpeilin takana, 4,4 m painopisteen takana, y = ±0,77 m (painoarvio ±0,75, runkomalli ±0,79).
+ *
+ * Vectorstick DOCKING: joystick antaa halutun voiman (X eteen, Y sivulle) ja tiller halutun momentin N. Jakaja (control allocation)
+ * ratkaisee jettien voimat: yhteinen X jaetaan tasan, momentti ja sivuvoima vaativat pitkittäisvoimien eron
+ * dX = (N - xn Y) / d, jossa xn = -4,4 m ja d = 0,77 m, eli puhdas sivuttaissiirto vaatii toisen jetin eteen ja toisen taakse
+ * noin 2,9-kertaisella voimalla sivuvoimaan nähden ja suuttimet noin 7-10° samaan suuntaan. Peruutustyöntö rajoittaa
+ * sivuttaissiirtoa (noin 0,2 x jettityöntö). Kierrosluku nousee tarpeen mukaan tyhjäkäynniltä docking-rajaan (dockRpm). Jaon
+ * logiikka on oma oletus Kamewan järjestelmän kuvauksen pohjalta ("joystick movements correspond to vessel movements"), ei
+ * valmistajan algoritmi.
+ * Vectorstick TRANSIT: tiller antaa molempien suuttimien kulman, joystickin pitkittäisakseli on yhdistetty kaasu (combinator):
+ * ensimmäinen neljännes liikkeestä kääntää kauhan neutraalista täyteen (eteen tai taakse), loppu nostaa kierroksia tyhjäkäynniltä
+ * täysille (peruutuksessa reverseRpmMax). Sivuttaisakselilla ei ole vaikutusta.
+ * Paneelit: CLUTCH PANEL (ENGAGE/DISENG kummallekin jetille, IDLE-säädin), TRIM-ROLL PANEL (AUTO/BACKUP, näytetään),
+ * BACKUP PANEL (AUTO/BACKUP kummallekin jetille: BACKUP ohittaa Vectorstickin ja mini-joystick asettaa suuttimen (x) ja
+ * kauhan tai interceptorin (y, INT/WJ-kytkin) suoraan), ENGINE BACKUP PANEL (AUTO/BACKUP, PORT RPM ja STBD RPM).
+ * Toimilaitteilla on hydrauliviive: suutin 30°/s, kauha neutraalista ääriasentoon 1 s, kierrosluku 1. kertaluvun viive 1,0 s.
+ *
+ * Kosketus (laituri, kelluva ponttoni): esteet ovat suorakaiteita maailmakoordinaatistossa. Rungon ääriviiva (kansiviiva
+ * törmäyskumeineen, runkomalli) ja esteen kulmat tarkistetaan molempiin suuntiin, ja tunkeuma antaa jousi-vaimenninvoiman
+ * normaalin suuntaan sekä kitkan tangentin suuntaan. Kelluva ponttoni ei välitä virtauksesta eikä sillä ole vuorovesivaihtelua.
+ * Kosketukset kirjataan (nopeus, normaalinopeus, kohta) purkua varten.
+ *
+ * Kaikki luvut ovat SETTINGS-oliossa ja ne ovat kalibroimattomia arvioita, kunnes malli on ajettu oikealla veneellä.
+ * Moduuli toimii selaimessa (window.Kasittely) ja Nodessa (module.exports). Tila on samanniminen kuin liike.js:ssä
+ * (x, y, hdg, conv, v, vs, rate, trim, roll, t, clockMs, dist, cmdLog), joten plotteri ja 3D-näkymä voivat lukea sen sellaisenaan. */
+(function (root) {
+  'use strict';
+  var KN = 1852 / 3600;
+  var RAD = Math.PI / 180;
+
+  var SETTINGS = {
+    // massa ja hitaus (operointipaino 14 t, perehdytysmateriaali; Iz = m (0,25 Loa)^2)
+    massKg: 14000, izKgm2: 131000,
+    addedMassX: 0.05, addedMassY: 0.9, addedInertia: 0.8,   // lisätty massa osuutena massasta ja hitausmomentista (arvio, liukurunko B/T noin 4,5)
+    waterRho: 1000, airRho: 1.225,
+    // runko (runkomallista): painopiste peräpeilistä, kaistat [x peräpeilistä, syväys m] 0,5 m välein
+    lcgFromTransomM: 3.78,
+    hullStrips: [[0, 0.923], [0.5, 0.909], [1, 0.896], [1.5, 0.882], [2, 0.887], [2.5, 0.873], [3, 0.86], [3.5, 0.846], [4, 0.832], [4.5, 0.818], [5, 0.805], [5.5, 0.791], [6, 0.777], [6.5, 0.762], [7, 0.745], [7.5, 0.728], [8, 0.705], [8.5, 0.669], [9, 0.619], [9.5, 0.548], [10, 0.481], [10.5, 0.232]],
+    stripDxM: 0.5,
+    crossFlowCd: 1.0,                 // poikkivirtausvastuksen kerroin (kova palle, V-pohja; kalibroidaan)
+    // lineaariset nostovoimatermit vauhdissa (Clarke ym. 1983, L 10,75 m, T 0,85 m, B 3,8 m, Cb 0,41): Y = |u| (yvLin v + yrLin r),
+    // N = |u| (nvLin v + nrLin r); yksiköt N per (m/s)^2, N s, Nm per (m/s)^2 ja Nm s. Antavat kurssivakavuuden vauhdissa
+    // (Yv' -0,034, Yr' +0,0016, Nv' -0,0135, Nr' -0,0044; Yv ja Nr kerrottu 1,2:lla, jotta käännös 5 kn:ssa ei ole pelkkä pyörähdys)
+    yvLin: -2360, yrLin: 1000, nvLin: -8380, nrLin: -35300,
+    // pieni lineaarinen vaimennus hitaassa liikkeessä, jotta tönäisyn jälkeinen kierto ja sorto asettuvat (ei neliöllisen poikkivirtausvastuksen puute)
+    yLin0: 300, nLin0: 5000,
+    // liukuvan rungon sivuttaisjäykkyys vauhdissa: Y = -yv2 u^2 v, N = -nr2 u^2 r. Täydellä tillerillä kääntösäde noin 8 m 4,5 kn:ssa, 9 m 9 kn:ssa,
+    // 60 m 27 kn:ssa ja 84 m 31 kn:ssa (liike.js: 12 m 5 kn:ssa, 70 m 30 kn:ssa); nopeus putoaa käännöksessä 20-45 %
+    yv2: 500, nr2: 0,
+    // pitkittäisvastus: liike.js:n liukukynnyskäyrä ilman keinotekoista rLowN-termiä, lisäksi pieni lineaarinen termi (viskoosi, epästationaarinen)
+    rHumpN: 16000, humpKn: 12, rPlaneN: 12000, planeKn: 17, rTopN: 21000, topKn: 35, planeExp: 1.3,
+    rLinearNsPerM: 200,               // N per m/s
+    reverseDragFactor: 2.5,
+    // vesijetit
+    jetBollardN: 15000,               // paaluveto jettiä kohti (perehdytys: noin 3 000 kg yhteensä)
+    thrustSpeedLoss: 0.3, thrustRefKn: 35,   // eteenpäin-työnnön väheneminen vauhdissa (liike.js)
+    reverseEff: 0.6,                  // peruutustyöntö paikallaan osuutena eteenpäin-työnnöstä (oletus)
+    reverseSpeedGain: 3.5,            // peruutustyöntö kasvaa vauhdissa: kerroin (1 + gain * u / vRef) (kalibroitu: crash stop 28 kn:sta noin 40 m, 6 s)
+    lateralBucketBase: 0.8, lateralBucketSlope: 0.2,   // sivuvoiman kerroin 0,8 + 0,2 b (neutraali kauha ohjaa 80 %:lla)
+    nozzleMaxDeg: 30,                 // suuttimen enimmäiskulma (oletus)
+    nozzleRateDegPerSec: 30, bucketRatePerSec: 1.0, rpmLagSec: 1.0, rpmRateMaxPerSec: 1200,   // kauha neutraalista ääriasentoon 1 s, täydestä eteen täyteen peruutukseen 2 s
+    nozzleXFromCgM: -4.4, jetYM: 0.77,
+    rpmMax: 2500, rpmIdle: 650, rpmIdleMax: 1100,   // CAT C9 2500 rpm; tyhjäkäynti ja IDLE-säätimen yläraja (oletus)
+    reverseRpmMax: 1.0,               // peruutuksessa kierrokset enintään tämä osuus täysistä (oletus 100 %: crash stop vaatii täydet)
+    dockRpmMax: 1500,                 // DOCKING-tilan kierrosluvun yläraja (oletus, 60 %: jettityöntö 5,4 kN, sivuttaissiirto noin 1 kn, kääntö paikallaan noin 9 °/s)
+    combinatorBucketFrac: 0.25,       // TRANSIT: joystickin liikkeestä ensimmäinen neljännes on kauhaa, loppu kierroksia
+    // ohjainten liikenopeudet näppäimistöllä (osuutta koko liikkeestä sekunnissa) ja tillerin jousipalautus
+    tillerRatePerSec: 1.0, joystickRatePerSec: 0.8, tillerSpring: false, joystickSpringDocking: false,
+    // tuuli (liike.js:n arvot) ja tuulen painekeskiö painopisteestä eteenpäin (päällysrakenne edessä)
+    windSideAreaM2: 25, windFrontAreaM2: 12, windCy: 1.0, windCx: 0.6, windCpXFromCgM: 2.2,
+    // kosketus (fenderit, D-kumi 100 mm): jousi N/m, vaimennin Ns/m, kitka (14 t, 0,5 kn kylki edellä: huippuvoima noin 15 kN, painuma noin 5 cm)
+    contactK: 100000, contactC: 15000, contactMu: 0.4, contactLogMinMs: 0.05, contactLogGapSec: 1.0,   // kosketus kirjataan kerran, uusi merkintä vasta sekunnin erillään olon jälkeen
+    crashEndMs: 0.4,                  // crash stop: ruorimies palauttaa joystickin keskelle, kun nopeus on tämän alle (kauha ehtii neutraaliin liikkeen loppuessa)
+    // rungon ääriviiva [x peräpeilistä, puolileveys] (kansiviiva + törmäyskumi 0,04 m)
+    hullOutline: [[-0.3, 1.2], [0, 2.245], [2, 2.247], [4, 2.249], [5, 2.242], [6, 2.206], [7, 2.123], [8, 1.98], [9, 1.773], [10, 1.503], [11, 1.152], [11.5, 0.923], [12, 0.579], [12.25, 0.06]],
+    // trimmi ja kallistus näkymää varten (liike.js)
+    trimPoints: [[0, 0], [6, 0.4], [10, 4.6], [12, 5], [14, 5], [17, 4.2], [22, 3.2], [28, 2.5], [35, 2.5]],
+    trimLagSec: 1.0, heelMaxDeg: 8, heelRefAccel: 3.0, heelLagSec: 0.6,
+    maxSubStep: 0.02
+  };
+
+  function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
+  function lerp(a, b, t) { return a + (b - a) * t; }
+  function norm360(d) { return ((d % 360) + 360) % 360; }
+  function wrap180(d) { return ((d + 180) % 360 + 360) % 360 - 180; }
+  function trueHdg(s) { return norm360(s.hdg + s.conv); }
+
+  // Pitkittäisvastus N nopeudella u (m/s) veden suhteen; negatiivinen u = perä edellä
+  function resistance(u) {
+    var S = SETTINGS, kn = Math.abs(u) / KN, r;
+    if (kn <= S.humpKn) r = S.rHumpN * Math.pow(kn / S.humpKn, 2);
+    else if (kn <= S.planeKn) r = lerp(S.rHumpN, S.rPlaneN, (kn - S.humpKn) / (S.planeKn - S.humpKn));
+    else r = S.rPlaneN + (S.rTopN - S.rPlaneN) * Math.pow(Math.min(1.2, (kn - S.planeKn) / (S.topKn - S.planeKn)), S.planeExp);
+    if (u < 0) r = S.reverseDragFactor * S.rHumpN * Math.pow(kn / S.humpKn, 2);
+    r += S.rLinearNsPerM * Math.abs(u);
+    return u < 0 ? -r : r;
+  }
+  function trimTarget(u) {
+    var p = SETTINGS.trimPoints, kn = Math.max(0, u) / KN;
+    if (kn <= p[0][0]) return p[0][1];
+    for (var i = 1; i < p.length; i++) if (kn <= p[i][0]) return lerp(p[i - 1][1], p[i][1], (kn - p[i - 1][0]) / (p[i][0] - p[i - 1][0]));
+    return p[p.length - 1][1];
+  }
+
+  // Jetin suihkun liikemäärätyöntö (N) kierrosluvulla n (rpm): eteenpäin ja peruutuksessa, veden suhteellisella pitkittäisnopeudella u
+  function jetThrustFwd(n, u) {
+    var S = SETTINGS, nu = clamp(n / S.rpmMax, 0, 1), f = u >= 0 ? Math.max(0, 1 - S.thrustSpeedLoss * u / (S.thrustRefKn * KN)) : 1 + S.thrustSpeedLoss * Math.min(1, -u / (S.thrustRefKn * KN));
+    return S.jetBollardN * nu * nu * f;
+  }
+  function jetThrustRev(n, u) {
+    var S = SETTINGS, nu = clamp(n / S.rpmMax, 0, 1), f = u >= 0 ? 1 + S.reverseSpeedGain * u / (S.thrustRefKn * KN) : Math.max(0, 1 - S.thrustSpeedLoss * -u / (S.thrustRefKn * KN));
+    return S.reverseEff * S.jetBollardN * nu * nu * f;
+  }
+  function lateralFactor(b) { return SETTINGS.lateralBucketBase + SETTINGS.lateralBucketSlope * b; }
+  // Yhden jetin voima runkokoordinaatistossa: { x, y } (N). b kauha -1..1, nozzleDeg suuttimen kulma (+ suihku oikealle), n rpm, u pitkittäisnopeus
+  function jetForce(n, b, nozzleDeg, u, engaged) {
+    if (!engaged) return { x: 0, y: 0, t: 0 };
+    var d = nozzleDeg * RAD, tf = jetThrustFwd(n, u), tr = jetThrustRev(n, u);
+    var x = (b >= 0 ? b * tf : b * tr) * Math.cos(d);
+    var y = -Math.sin(d) * lateralFactor(b) * tf;
+    return { x: x, y: y, t: tf };
+  }
+
+  // ---------------------------------------------------------------------------------------------
+  // Tila
+  // ---------------------------------------------------------------------------------------------
+  function create(init) {
+    init = init || {};
+    var S = SETTINGS;
+    var jet = function () { return { rpm: S.rpmIdle, rpmCmd: S.rpmIdle, bucket: 0, bucketCmd: 0, nozzle: 0, nozzleCmd: 0, tab: 0, engaged: true, backup: false, backupInt: false, backupX: 0, backupY: 0, engineBackup: false, engineBackupRpm: S.rpmIdle }; };
+    return {
+      t: 0, clockMs: init.clockMs || Date.now(),
+      x: init.x || 0, y: init.y || 0, hdg: init.hdg || 0, conv: init.conv || 0,
+      v: init.v || 0, vs: init.vs || 0, rate: 0,              // u, v (m/s) ja r (aste/s), samat nimet kuin liike.js:ssä
+      trim: 0, roll: 0, dist: 0, speedFactor: 1,
+      windFrom: init.windFrom || 0, windSpeed: init.windSpeed || 0,
+      currentTo: 0, currentSpeed: 0,                           // virtaus: tosisuunta, johon virtaa (aste) ja nopeus (m/s); oletus 0 (kelluva laituri, ei virtausta)
+      mode: init.mode || 'DOCKING',                            // JOYSTICK-ohjaimen valintakytkin: 'TRANSIT' tai 'DOCKING'
+      tiller: 0, joyX: 0, joyY: 0,                             // ohjaimet -1..1: tiller (+ oikealle), joystick sivuttain (+ oikealle) ja eteen (+)
+      keys: { tillerL: false, tillerR: false, fwd: false, aft: false, left: false, right: false },   // näppäinten tila (pidä pohjassa)
+      idleRpm: S.rpmIdle,                                      // CLUTCH PANELin IDLE-säädin
+      trimRollAuto: true, trimKnob: 0, rollKnob: 0,
+      jets: [jet(), jet()],                                    // [PORT, STBD]
+      demand: { X: 0, Y: 0, N: 0 },                            // DOCKING: jakajan tavoite (N, N, Nm)
+      forces: { X: 0, Y: 0, N: 0, jets: [{ x: 0, y: 0 }, { x: 0, y: 0 }], hull: { X: 0, Y: 0, N: 0 }, wind: { X: 0, Y: 0, N: 0 }, contact: { X: 0, Y: 0, N: 0 } },
+      obstacles: [],                                           // esteet: { kind: 'ponttoni', x, y, hdg, lengthM, widthM } (keskipiste, suunta asteina)
+      contacts: [], inContact: false, crashCmd: false,
+      cmdLog: []
+    };
+  }
+  function logCmd(s, kind, value, extra) {
+    var e = { t: s.t, clockMs: s.clockMs, kind: kind, value: value, x: s.x, y: s.y, hdg: s.hdg, hdgTrue: trueHdg(s), v: s.v, vs: s.vs };
+    if (extra) for (var k in extra) e[k] = extra[k];
+    s.cmdLog.push(e);
+  }
+
+  // ---------------------------------------------------------------------------------------------
+  // Ohjaimet ja paneelit
+  // ---------------------------------------------------------------------------------------------
+  function setMode(s, mode) {
+    mode = mode === 'TRANSIT' ? 'TRANSIT' : 'DOCKING';
+    if (s.mode === mode) return;
+    s.mode = mode; s.joyX = 0; s.joyY = 0;   // tilan vaihto: joystick keskelle (järjestelmä vaatii neutraalin, oletus)
+    logCmd(s, 'mode', mode);
+  }
+  function setTiller(s, v) { s.tiller = clamp(v, -1, 1); }
+  function setJoystick(s, x, y) { s.joyX = s.mode === 'DOCKING' ? clamp(x, -1, 1) : 0; s.joyY = clamp(y, -1, 1); }
+  function centreTiller(s) { s.tiller = 0; logCmd(s, 'tiller0', 0); }
+  function centreJoystick(s) { s.joyX = 0; s.joyY = 0; logCmd(s, 'joy0', 0); }
+  function setIdle(s, rpm) { s.idleRpm = clamp(rpm, SETTINGS.rpmIdle, SETTINGS.rpmIdleMax); }
+  // CLUTCH PANEL: kytkeminen onnistuu vain joystickin ollessa keskellä (käsikirja: vain merkkivalon vilkkuessa)
+  function setClutch(s, side, engaged) {
+    var j = s.jets[side]; engaged = !!engaged;
+    if (engaged && (Math.abs(s.joyX) > 0.05 || Math.abs(s.joyY) > 0.05)) return false;
+    if (j.engaged === engaged) return true;
+    j.engaged = engaged; logCmd(s, engaged ? 'engage' : 'diseng', side);
+    return true;
+  }
+  function setBackup(s, side, backup) { s.jets[side].backup = !!backup; logCmd(s, backup ? 'backup' : 'auto', side); }
+  function setBackupSelector(s, side, intMode) { s.jets[side].backupInt = !!intMode; }
+  function setBackupStick(s, side, x, y) { var j = s.jets[side]; j.backupX = clamp(x, -1, 1); j.backupY = clamp(y, -1, 1); }
+  function setEngineBackup(s, side, backup) { s.jets[side].engineBackup = !!backup; logCmd(s, backup ? 'engbackup' : 'engauto', side); }
+  function setEngineBackupRpm(s, side, rpm) { s.jets[side].engineBackupRpm = clamp(rpm, SETTINGS.rpmIdle, SETTINGS.rpmMax); }
+  function setWind(s, fromDeg, speed) { s.windFrom = norm360(Number(fromDeg) || 0); s.windSpeed = Math.max(0, Number(speed) || 0); }
+  function setCurrent(s, toDeg, speed) { s.currentTo = norm360(Number(toDeg) || 0); s.currentSpeed = Math.max(0, Number(speed) || 0); }
+  // Crash stop (käsikirja 9.4.5): TRANSIT-tilassa joystick taakse ääriasentoon; kun eteenpäin liike loppuu, joystick keskelle
+  function crashStop(s) {
+    if (s.v <= SETTINGS.crashEndMs) return false;
+    if (s.mode !== 'TRANSIT') setMode(s, 'TRANSIT');
+    s.crashCmd = true; s.joyY = -1; s.joyX = 0; logCmd(s, 'crash', 1);
+    return true;
+  }
+  // Näppäinten vaikutus ohjaimiin (pidä pohjassa): tiller ja joystick liikkuvat rajoitetulla nopeudella ja jäävät asentoonsa
+  function applyKeys(s, dt) {
+    var S = SETTINGS, k = s.keys;
+    var td = (k.tillerR ? 1 : 0) - (k.tillerL ? 1 : 0);
+    if (td) s.tiller = clamp(s.tiller + td * S.tillerRatePerSec * dt, -1, 1);
+    else if (S.tillerSpring) s.tiller -= clamp(s.tiller, -S.tillerRatePerSec * dt, S.tillerRatePerSec * dt);
+    var yd = (k.fwd ? 1 : 0) - (k.aft ? 1 : 0), xd = (k.right ? 1 : 0) - (k.left ? 1 : 0);
+    if (yd) s.joyY = clamp(s.joyY + yd * S.joystickRatePerSec * dt, -1, 1);
+    if (s.mode === 'DOCKING') {
+      if (xd) s.joyX = clamp(s.joyX + xd * S.joystickRatePerSec * dt, -1, 1);
+      else if (S.joystickSpringDocking) s.joyX -= clamp(s.joyX, -S.joystickRatePerSec * dt, S.joystickRatePerSec * dt);
+      if (!yd && S.joystickSpringDocking) s.joyY -= clamp(s.joyY, -S.joystickRatePerSec * dt, S.joystickRatePerSec * dt);
+    } else s.joyX = 0;
+    if (s.crashCmd && yd > 0) s.crashCmd = false;
+  }
+
+  // ---------------------------------------------------------------------------------------------
+  // Vectorstick: ohjainten käskyt jettien tavoitteiksi (rpmCmd, bucketCmd, nozzleCmd)
+  // ---------------------------------------------------------------------------------------------
+  function bucketFromForce(x, tf, tr) { return x >= 0 ? clamp(x / Math.max(1, tf), 0, 1) : clamp(x / Math.max(1, tr), -1, 0); }
+  function vectorstick(s) {
+    var S = SETTINGS, nMax = S.nozzleMaxDeg, idle = s.idleRpm, u = s.v;
+    var P = s.jets[0], Q = s.jets[1], i, j;
+    if (s.mode === 'TRANSIT') {
+      // combinator: ensimmäinen neljännes kauhaa, loppu kierroksia
+      var jy = s.joyY, f = S.combinatorBucketFrac, a = Math.abs(jy), b = clamp(jy / f, -1, 1);
+      var rpm = idle + (S.rpmMax * (jy < 0 ? S.reverseRpmMax : 1) - idle) * clamp((a - f) / (1 - f), 0, 1);
+      if (s.crashCmd && u <= S.crashEndMs) { s.crashCmd = false; s.joyY = 0; b = 0; rpm = idle; logCmd(s, 'joy0', 0); }
+      for (i = 0; i < 2; i++) { j = s.jets[i]; j.rpmCmd = rpm; j.bucketCmd = b; j.nozzleCmd = s.tiller * nMax; }
+      s.demand = { X: 0, Y: 0, N: 0 };
+    } else {
+      // DOCKING: haluttu voima ja momentti, jakaja
+      var xn = S.nozzleXFromCgM, d = S.jetYM, nDock = S.dockRpmMax;
+      var tDock = jetThrustFwd(nDock, u), trDock = jetThrustRev(nDock, u);
+      // ohjainten ääriasentojen voimat: eteen molemmat jetit täydellä docking-työnnöllä, sivulle ja kääntöön peruutustyöntö rajoittaa
+      // (sivuttaissiirto X = 0, N = 0: X2 = -(xn/d) Y / 2 = -trDock -> Ycap = 2 trDock d / -xn; kääntö paikallaan: dX = 2 trDock -> Ncap = 2 d trDock)
+      var Xcap = 2 * tDock, Ycap = 2 * trDock * d / -xn, Ncap = 2 * d * trDock;
+      var X = s.joyY * Xcap, Y = s.joyX * Ycap, N = s.tiller * Ncap;
+      s.demand = { X: X, Y: Y, N: N };
+      // momentin jako: paikallaan (joystick keskellä) tiller tuottaa momentin jettien työntöerolla ilman sivuvoimaa; kun joystick on eteen tai taakse,
+      // osuus fNoz momentista tehdään suuttimilla kuten ruorilla (sivuvoima perässä), mikä on vauhdissa 2,9-kertaisesti tehokkaampaa (xn / d)
+      var fNoz = clamp(Math.abs(X) / (0.5 * Xcap), 0, 1), Ynoz = fNoz * N / xn;
+      Y += Ynoz;
+      var dX = (N - xn * Y) / d, X1 = (X + dX) / 2, X2 = (X - dX) / 2, Y1 = Y / 2, Y2 = Y / 2;
+      // tarvittava jettityöntö ja kierrosluku
+      var req = 0, xs = [X1, X2], ys = [Y1, Y2];
+      for (i = 0; i < 2; i++) {
+        var rx = xs[i] >= 0 ? xs[i] / 1 : -xs[i] / S.reverseEff;
+        var ry = Math.abs(ys[i]) / (lateralFactor(xs[i] >= 0 ? 1 : -1) * Math.sin(nMax * RAD));
+        req = Math.max(req, rx, ry);
+      }
+      var rpmReq = S.rpmMax * Math.sqrt(req / S.jetBollardN), rpmT = clamp(rpmReq, idle, nDock);
+      var tAv = jetThrustFwd(rpmT, u), trAv = jetThrustRev(rpmT, u), scale = 1;
+      // jos tarve ylittää docking-rajan, skaalataan koko voimavektori (suunta säilyy)
+      if (req > tAv * 1.0001 && req > 0) scale = tAv / req;
+      for (i = 0; i < 2; i++) {
+        j = s.jets[i];
+        var fx = xs[i] * scale, fy = ys[i] * scale, bk = bucketFromForce(fx, tAv, trAv), dl = 0;
+        for (var it = 0; it < 3; it++) {
+          dl = clamp(-Math.asin(clamp(fy / Math.max(1, lateralFactor(bk) * tAv), -1, 1)) / RAD, -nMax, nMax);
+          bk = bucketFromForce(fx / Math.max(0.5, Math.cos(dl * RAD)), tAv, trAv);
+        }
+        j.rpmCmd = rpmT; j.bucketCmd = bk; j.nozzleCmd = dl;
+      }
+      // ohjaimet keskellä: neutraali kauha, suuttimet keskelle, tyhjäkäynti
+      if (!X && !Y && !N) for (i = 0; i < 2; i++) { j = s.jets[i]; j.rpmCmd = idle; j.bucketCmd = 0; j.nozzleCmd = 0; }
+    }
+    // BACKUP PANEL ja ENGINE BACKUP PANEL ohittavat automatiikan
+    for (i = 0; i < 2; i++) {
+      j = s.jets[i];
+      if (j.backup) { j.nozzleCmd = j.backupX * nMax; if (j.backupInt) j.tab = clamp(j.backupY, 0, 1); else j.bucketCmd = j.backupY; }
+      if (j.engineBackup) j.rpmCmd = j.engineBackupRpm;
+      if (!j.engaged) j.rpmCmd = Math.max(j.rpmCmd, idle);
+    }
+  }
+  // Toimilaitteiden seuranta: suutin ja kauha nopeusrajoitettuina, kierrosluku viiveellä ja nopeusrajalla
+  function actuators(s, dt) {
+    var S = SETTINGS;
+    for (var i = 0; i < 2; i++) {
+      var j = s.jets[i], mx = S.nozzleRateDegPerSec * dt, mb = S.bucketRatePerSec * dt;
+      j.nozzle += clamp(j.nozzleCmd - j.nozzle, -mx, mx);
+      j.bucket += clamp(j.bucketCmd - j.bucket, -mb, mb);
+      var dr = (j.rpmCmd - j.rpm) * (1 - Math.exp(-dt / S.rpmLagSec)), mr = S.rpmRateMaxPerSec * dt;
+      j.rpm += clamp(dr, -mr, mr);
+      if (s.trimRollAuto && !j.backup) j.tab = clamp((s.v / KN - 8) / 14, 0, 1) * 0.6;   // interceptorit AUTO: seuraavat vauhtia (vain näyttöä varten)
+    }
+  }
+
+  // ---------------------------------------------------------------------------------------------
+  // Voimat
+  // ---------------------------------------------------------------------------------------------
+  // Runkovoimat veden suhteellisilla nopeuksilla ur, vr (m/s) ja r (rad/s)
+  function hullForces(ur, vr, r) {
+    var S = SETTINGS, q = 0.5 * S.waterRho * S.crossFlowCd, Y = 0, N = 0;
+    for (var i = 0; i < S.hullStrips.length; i++) {
+      var st = S.hullStrips[i], xb = st[0] + S.stripDxM / 2 - S.lcgFromTransomM, vc = vr + xb * r;
+      var dy = -q * st[1] * S.stripDxM * vc * Math.abs(vc);
+      Y += dy; N += xb * dy;
+    }
+    var au = Math.abs(ur);
+    var u2 = ur * ur;
+    Y += au * (S.yvLin * vr + S.yrLin * r) - S.yLin0 * vr - S.yv2 * u2 * vr;
+    N += au * (S.nvLin * vr + S.nrLin * r) - S.nLin0 * r - S.nr2 * u2 * r;
+    return { X: -resistance(ur), Y: Y, N: N };
+  }
+  // Tuulen voimat ja momentti runkokoordinaatistossa (liike.js:n kaava, lisäksi momentti painekeskiöstä)
+  function windForces(s) {
+    var S = SETTINGS;
+    if (!(s.windSpeed > 0) && !s.v && !s.vs) return { X: 0, Y: 0, N: 0, app: 0, rel: 0 };
+    var h = trueHdg(s) * RAD, to = (s.windFrom + 180) * RAD;
+    var we = Math.sin(to) * s.windSpeed, wn = Math.cos(to) * s.windSpeed;
+    var wf = we * Math.sin(h) + wn * Math.cos(h), wr = we * Math.cos(h) - wn * Math.sin(h);
+    var ax = wf - s.v, ay = wr - s.vs, aa = Math.hypot(ax, ay), q = 0.5 * S.airRho;
+    var X = q * S.windCx * S.windFrontAreaM2 * (ax * aa - (-s.v) * Math.abs(s.v));   // pitkittäisvoimasta vain ero tyyneen (vastuskäyrä sisältää ilmanvastuksen)
+    var Y = q * S.windCy * S.windSideAreaM2 * ay * aa;
+    return { X: X, Y: Y, N: S.windCpXFromCgM * Y, app: aa, rel: norm360(Math.atan2(-ay, -ax) / RAD) };
+  }
+
+  // Rungon ääriviiva maailmakoordinaatistossa [[x, y], ...] myötäpäivään keulasta
+  function hullPolygon(s) {
+    var S = SETTINGS, o = S.hullOutline, pts = [], h = s.hdg * RAD, sh = Math.sin(h), ch = Math.cos(h), lcg = S.lcgFromTransomM;
+    var add = function (xb, yb) { pts.push([s.x + sh * xb + ch * yb, s.y + ch * xb - sh * yb]); };
+    for (var i = o.length - 1; i >= 0; i--) add(o[i][0] - lcg, o[i][1]);      // oikea kylki keulasta perään
+    for (i = 0; i < o.length; i++) add(o[i][0] - lcg, -o[i][1]);             // vasen kylki perästä keulaan
+    return pts;
+  }
+  function obstaclePolygon(ob) {
+    var h = ob.hdg * RAD, sh = Math.sin(h), ch = Math.cos(h), L = ob.lengthM / 2, W = ob.widthM / 2, pts = [];
+    [[L, W], [L, -W], [-L, -W], [-L, W]].forEach(function (p) { pts.push([ob.x + sh * p[0] + ch * p[1], ob.y + ch * p[0] - sh * p[1]]); });
+    return pts;
+  }
+  function pointInPoly(p, poly) {
+    var inside = false;
+    for (var i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+      var xi = poly[i][0], yi = poly[i][1], xj = poly[j][0], yj = poly[j][1];
+      if ((yi > p[1]) !== (yj > p[1]) && p[0] < (xj - xi) * (p[1] - yi) / (yj - yi) + xi) inside = !inside;
+    }
+    return inside;
+  }
+  // Lähin reuna monikulmion sisällä olevalle pisteelle: { dist, nx, ny } (normaali ulospäin)
+  function nearestEdge(p, poly) {
+    var best = null;
+    for (var i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+      var ax = poly[j][0], ay = poly[j][1], bx = poly[i][0], by = poly[i][1], ex = bx - ax, ey = by - ay, l2 = ex * ex + ey * ey || 1e-9;
+      var t = clamp(((p[0] - ax) * ex + (p[1] - ay) * ey) / l2, 0, 1), cx = ax + t * ex, cy = ay + t * ey, d = Math.hypot(p[0] - cx, p[1] - cy);
+      if (!best || d < best.dist) { var nx = cx - p[0], ny = cy - p[1], nl = Math.hypot(nx, ny) || 1; best = { dist: d, nx: nx / nl, ny: ny / nl, cx: cx, cy: cy }; }
+    }
+    return best;
+  }
+  // Kosketusvoimat: rungon pisteet esteessä ja esteen kulmat rungossa. Palauttaa runkokoordinaatiston { X, Y, N } ja kirjaa kosketukset.
+  function contactForces(s, dt) {
+    var S = SETTINGS, X = 0, Y = 0, N = 0, any = false, logged = false;
+    if (!s.obstacles.length) { s.inContact = false; return { X: 0, Y: 0, N: 0 }; }
+    var hull = hullPolygon(s), h = s.hdg * RAD, sh = Math.sin(h), ch = Math.cos(h), r = s.rate * RAD;
+    var apply = function (px, py, nx, ny, pen) {
+      // pisteen nopeus maailmassa (runko + kierto), normaali (nx, ny) osoittaa pisteestä ulos esteestä eli voiman suuntaan rungolle
+      var rx = px - s.x, ry = py - s.y, vwx = s.v * sh + s.vs * ch + s.currentE, vwy = s.v * ch - s.vs * sh + s.currentN;
+      vwx += r * ry; vwy += -r * rx;   // kierto myötäpäivään (hdg kasvaa myötäpäivään): piste keulassa (pohjoisessa) liikkuu itään, nopeus r * (ry, -rx)
+      var vn = vwx * nx + vwy * ny;    // normaalinopeus (+ erkanee)
+      var fn = S.contactK * pen - S.contactC * Math.min(0, vn); if (fn < 0) fn = 0;
+      var tx = -ny, ty = nx, vt = vwx * tx + vwy * ty, ft = -S.contactMu * fn * clamp(vt / 0.05, -1, 1);
+      var fx = fn * nx + ft * tx, fy = fn * ny + ft * ty;
+      var bx = fx * sh + fy * ch, by = fx * ch - fy * sh;   // maailmasta runkoon: eteen = (sin h, cos h), oikealle = (cos h, -sin h)
+      var rbx = rx * sh + ry * ch, rby = rx * ch - ry * sh;
+      X += bx; Y += by; N += rbx * by - rby * bx; any = true;
+      if (!logged && !s.inContact && -vn > S.contactLogMinMs && s.t - (s.lastContactT || -1e9) > S.contactLogGapSec) {
+        logged = true; s.lastContactT = s.t;
+        logCmd(s, 'kosketus', Math.round(-vn / KN * 100) / 100, { vnMs: -vn, speedKn: Math.hypot(s.v, s.vs) / KN, px: px, py: py });
+      }
+    };
+    for (var k = 0; k < s.obstacles.length; k++) {
+      var poly = obstaclePolygon(s.obstacles[k]), i, p, e;
+      // rungon piste esteen sisällä: lähin reuna osoittaa esteestä ulos, voima rungolle samaan suuntaan
+      for (i = 0; i < hull.length; i++) { p = hull[i]; if (pointInPoly(p, poly)) { e = nearestEdge(p, poly); apply(p[0], p[1], e.nx, e.ny, e.dist); } }
+      // esteen kulma rungon sisällä: lähin reuna osoittaa rungosta ulos (kulman poistumissuunta), runkoa työnnetään vastakkaiseen suuntaan
+      for (i = 0; i < poly.length; i++) { p = poly[i]; if (pointInPoly(p, hull)) { e = nearestEdge(p, hull); apply(p[0], p[1], -e.nx, -e.ny, e.dist); } }
+    }
+    if (any) s.lastContactT = s.t;   // kosketuksen kesto: erillään olon laskenta alkaa, kun kosketus päättyy
+    s.inContact = any;
+    return { X: X, Y: Y, N: N };
+  }
+
+  // ---------------------------------------------------------------------------------------------
+  // Integrointi
+  // ---------------------------------------------------------------------------------------------
+  function stepOnce(s, dt) {
+    var S = SETTINGS, m = S.massKg, mx = m * (1 + S.addedMassX), my = m * (1 + S.addedMassY), iz = S.izKgm2 * (1 + S.addedInertia);
+    applyKeys(s, dt);
+    vectorstick(s);
+    actuators(s, dt);
+    // virtaus itä-pohjoinen: s.v ja s.vs ovat nopeuksia veden suhteen (STW), virtaus lisätään paikan integrointiin ja kosketuksen nopeuteen
+    var ct = s.currentTo * RAD; s.currentE = Math.sin(ct) * s.currentSpeed; s.currentN = Math.cos(ct) * s.currentSpeed;
+    var h = s.hdg * RAD;
+    var ur = s.v, vr = s.vs, r = s.rate * RAD;
+    // voimat
+    var H = hullForces(ur, vr, r), W = windForces(s), C = contactForces(s, dt);
+    var JX = 0, JY = 0, JN = 0, jf = [];
+    for (var i = 0; i < 2; i++) {
+      var j = s.jets[i], f = jetForce(j.rpm, j.bucket, j.nozzle, ur, j.engaged), yj = i === 0 ? -S.jetYM : S.jetYM;
+      JX += f.x; JY += f.y; JN += S.nozzleXFromCgM * f.y - yj * f.x; jf.push({ x: f.x, y: f.y, t: f.t });
+    }
+    var X = H.X + JX + W.X + C.X, Y = H.Y + JY + W.Y + C.Y, N = H.N + JN + W.N + C.N;
+    s.forces = { X: X, Y: Y, N: N, jets: jf, hull: H, wind: { X: W.X, Y: W.Y, N: W.N }, contact: C, app: W.app, rel: W.rel };
+    // kiihtyvyydet: jäykän kappaleen Coriolis-termit massalla m; lisätyn massan Munk-vaikutukset sisältyvät lineaarisiin derivaattoihin (Nv)
+    var du = (X + m * s.vs * r) / mx, dv = (Y - m * s.v * r) / my, dr = N / iz;
+    var u0 = s.v;
+    s.v += du * dt; s.vs += dv * dt; r += dr * dt;
+    // pysähtyminen: pieni ryömintä nollataan, jos työntö ja ulkoiset voimat puuttuvat (numeerinen siisteys, ei fysiikkaa)
+    if (Math.abs(JX) < 1 && Math.abs(W.X) < 1 && !C.X && Math.abs(s.v) < 0.003 && !s.currentSpeed) s.v = 0;
+    if (Math.abs(JY) < 1 && Math.abs(W.Y) < 1 && !C.Y && Math.abs(s.vs) < 0.003 && !s.currentSpeed) s.vs = 0;
+    if (Math.abs(JN) < 1 && Math.abs(W.N) < 1 && !C.N && Math.abs(r) < 0.0005) r = 0;
+    s.rate = r / RAD;
+    // paikka: nopeus veden suhteen + virtaus
+    var hm = h + 0.5 * r * dt, ds = s.v * dt, dsl = s.vs * dt;
+    s.hdg = norm360(s.hdg + s.rate * dt);
+    s.x += Math.sin(hm) * ds + Math.cos(hm) * dsl + s.currentE * dt;
+    s.y += Math.cos(hm) * ds - Math.sin(hm) * dsl + s.currentN * dt;
+    s.dist += Math.hypot(ds, dsl);
+    // trimmi ja kallistus (näkymä): keskihakukiihtyvyys ja sivuttaiskiihtyvyys
+    s.trim += (trimTarget(s.v) - s.trim) * (1 - Math.exp(-dt / S.trimLagSec));
+    var ac = s.v * r + dv;
+    s.roll += (clamp(ac / S.heelRefAccel, -1, 1) * S.heelMaxDeg - s.roll) * (1 - Math.exp(-dt / S.heelLagSec));
+    s.t += dt; s.clockMs += dt * 1000;
+  }
+  function advance(s, dt) {
+    var n = Math.max(1, Math.ceil(dt / SETTINGS.maxSubStep)), h = dt / n;
+    for (var i = 0; i < n; i++) stepOnce(s, h);
+  }
+  function stepFrame(s, realDt) {
+    if (!(s.speedFactor > 0)) return 0;
+    var dt = Math.min(realDt, 0.25) * s.speedFactor;
+    advance(s, dt);
+    return dt;
+  }
+
+  // ---------------------------------------------------------------------------------------------
+  // Apufunktiot käyttöliittymälle ja testeille
+  // ---------------------------------------------------------------------------------------------
+  function sog(s) { var e = s.v * Math.sin(s.hdg * RAD) + s.vs * Math.cos(s.hdg * RAD) + (s.currentE || 0), n = s.v * Math.cos(s.hdg * RAD) - s.vs * Math.sin(s.hdg * RAD) + (s.currentN || 0); return Math.hypot(e, n); }
+  function cogTrue(s) { var e = s.v * Math.sin(s.hdg * RAD) + s.vs * Math.cos(s.hdg * RAD) + (s.currentE || 0), n = s.v * Math.cos(s.hdg * RAD) - s.vs * Math.sin(s.hdg * RAD) + (s.currentN || 0); return Math.hypot(e, n) > 0.02 ? norm360(Math.atan2(e, n) / RAD + s.conv) : trueHdg(s); }
+  function cogGrid(s) { return norm360(cogTrue(s) - s.conv); }
+  // Esteet: kelluva ponttoni (keskipiste, suunta, pituus, leveys)
+  function addPontoon(s, x, y, hdgDeg, lengthM, widthM) { var ob = { kind: 'ponttoni', x: x, y: y, hdg: norm360(hdgDeg), lengthM: lengthM, widthM: widthM }; s.obstacles.push(ob); return ob; }
+  function clearObstacles(s) { s.obstacles = []; s.inContact = false; }
+  // Lyhin etäisyys rungon ääriviivasta esteeseen (m, negatiivinen = sisällä) näyttöä varten
+  function distanceToObstacle(s, ob) {
+    var hull = hullPolygon(s), poly = obstaclePolygon(ob), best = Infinity, i, e;
+    for (i = 0; i < hull.length; i++) { e = nearestEdge(hull[i], poly); var d = pointInPoly(hull[i], poly) ? -e.dist : e.dist; if (d < best) best = d; }
+    for (i = 0; i < poly.length; i++) { e = nearestEdge(poly[i], hull); d = pointInPoly(poly[i], hull) ? -e.dist : e.dist; if (d < best) best = d; }
+    return best;
+  }
+  // Ohjaimet lukuina LCD-paneelia varten
+  function panel(s) {
+    return s.jets.map(function (j, i) { return { side: i === 0 ? 'PORT' : 'STBD', rpm: Math.round(j.rpm), bucket: j.bucket, nozzle: j.nozzle, tab: j.tab, engaged: j.engaged, backup: j.backup, engineBackup: j.engineBackup }; });
+  }
+  function speedText(s) { return (s.v / KN).toFixed(1) + ' kn'; }
+
+  var api = {
+    KN: KN, SETTINGS: SETTINGS, create: create, stepOnce: stepOnce, advance: advance, stepFrame: stepFrame,
+    setMode: setMode, setTiller: setTiller, setJoystick: setJoystick, centreTiller: centreTiller, centreJoystick: centreJoystick, setIdle: setIdle,
+    setClutch: setClutch, setBackup: setBackup, setBackupSelector: setBackupSelector, setBackupStick: setBackupStick, setEngineBackup: setEngineBackup, setEngineBackupRpm: setEngineBackupRpm,
+    setWind: setWind, setCurrent: setCurrent, crashStop: crashStop, addPontoon: addPontoon, clearObstacles: clearObstacles, distanceToObstacle: distanceToObstacle,
+    hullPolygon: hullPolygon, obstaclePolygon: obstaclePolygon, panel: panel, trueHdg: trueHdg, wrap180: wrap180, sog: sog, cogTrue: cogTrue, cogGrid: cogGrid,
+    resistance: resistance, jetThrustFwd: jetThrustFwd, jetThrustRev: jetThrustRev, jetForce: jetForce, hullForces: hullForces, windForces: windForces, trimTarget: trimTarget, speedText: speedText
+  };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.Kasittely = api;
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+/* Repan käsittelyharjoitus – 2D-testisivu (kasittely.html, malli v0, kalibroimaton).
+ *
+ * Sivu on pelkkä käyttöliittymä liikemallin (kasittely.js, window.Kasittely) päällä: se ei laske liikettä itse. Näkymä on ylhäältä
+ * piirretty canvas, ohjaimina ovat TILLER ja JOYSTICK (vedettävät, jäävät asentoonsa) sekä Rolls-Roycen paneelit englanninkielisine
+ * nimineen. Mallin tila on s: s.x (itä, m), s.y (pohjoinen, m), s.hdg (aste, 0 = pohjoinen, myötäpäivään), s.v = u, s.vs = v,
+ * s.rate = kääntymisnopeus (°/s). Kaikki toiminnot ovat myös napeilla, koska puhelimessa ei ole näppäimistöä. */
+(function () {
+  'use strict';
+  var K = window.Kasittely;
+  var KN = K.KN, SET = K.SETTINGS, RAD = Math.PI / 180;
+  var PONTTONI = { x: 0, y: 0, hdg: 0, pituus: 20, leveys: 2.4 };   // kelluva ponttoni, pohjois-eteläsuuntainen
+  var JETTI_SKAALA = 2.5 / 15000;                                   // työntönuoli: 15 kN = 2,5 m
+  var ENNUSTE_S = 10;                                               // nopeusvektori: 10 s:n ennuste SOG:lla
+  var RUUDUKKO_RAJA = 2.2;                                          // tätä pienemmällä zoomilla ruudukko on 25 m (5 m viivat menisivät liian tiheiksi)
+
+  function $(id) { return document.getElementById(id); }
+  function raja(v, a, b) { return v < a ? a : v > b ? b : v; }
+
+  // ---- Lukujen muotoilu (suomalainen desimaalipilkku ja oikea miinusmerkki) ----
+  function luku(x, d) {
+    var r = Number(x.toFixed(d));
+    var t = (r === 0 ? 0 : r).toFixed(d);
+    return t.replace('-', '−').replace('.', ',');
+  }
+  function merkki(x, d) { var t = luku(x, d); return (x > 0 && t.charAt(0) !== '−' && Number(x.toFixed(d)) !== 0 ? '+' : '') + t; }
+  function aikaTeksti(t) { var m = Math.floor(t / 60), sek = Math.floor(t % 60); return m + ':' + (sek < 10 ? '0' : '') + sek; }
+  function suunta3(d) { var n = Math.round(((d % 360) + 360) % 360) % 360; return ('00' + n).slice(-3) + '°'; }
+  function aseta(el, teksti) { if (el._t !== teksti) { el.textContent = teksti; el._t = teksti; } }
+
+  // ---- Tila ----
+  var s = null;                  // mallin tila (Kasittely.create)
+  var este = null;               // ponttoni (tai null vapaassa vedessä)
+  var tauko = false, kerroin = 1;
+  var tuuli = { from: 0, speed: 0 };
+  var nakyma = { k: 8, keula: false };
+  var polku = [];                // ajettu jälki [[x, y], ...]
+  var pidetty = {};              // näppäinten tila: tillerL, tillerR, fwd, aft, left, right
+  var tillerVeto = null, joyVeto = null;   // käynnissä oleva sormiveto
+  var lokiPituus = -1, kosketusMaara = 0, viimeisinKn = null;
+  var toastAjastin = 0, viestiAjastin = 0;
+
+  // ---------------------------------------------------------------------------------------------
+  // Lähtötilanteet
+  // ---------------------------------------------------------------------------------------------
+  // Siirtää venettä suuntaa (dx, dy) vasten pisteestä (x0, y0), kunnes rungon etäisyys ponttoniin on tavoite
+  function sijoitaEtaisyyteen(st, ob, x0, y0, dx, dy, tavoite) {
+    var k = tavoite + 8, d, i;
+    for (i = 0; i < 8; i++) {
+      st.x = x0 - dx * k; st.y = y0 - dy * k;
+      d = K.distanceToObstacle(st, ob);
+      k += tavoite - d;
+    }
+  }
+
+  function aloita() {
+    var nimi = $('selTilanne').value, st;
+    este = null;
+    if (nimi === 'lahestyminen') {
+      // vene 30 m ponttonista, keula kohti ponttonin länsikylkeä 45° kulmassa, nopeus nolla: vene on ponttonin luoteispuolella ja
+      // keulasuunta on 135° (kaakkoon), jolloin ponttoni näkyy alhaalla oikealla eikä jää mittarien alle
+      st = K.create({ hdg: 135, mode: 'DOCKING' });
+      este = K.addPontoon(st, PONTTONI.x, PONTTONI.y, PONTTONI.hdg, PONTTONI.pituus, PONTTONI.leveys);
+      sijoitaEtaisyyteen(st, este, -PONTTONI.leveys / 2, 0, Math.sin(135 * RAD), Math.cos(135 * RAD), 30);
+    } else if (nimi === 'kylki') {
+      // vene kiinni ponttonin länsikyljessä, keula pohjoiseen, etäisyys fenderiin 5 cm
+      st = K.create({ hdg: 0, mode: 'DOCKING' });
+      este = K.addPontoon(st, PONTTONI.x, PONTTONI.y, PONTTONI.hdg, PONTTONI.pituus, PONTTONI.leveys);
+      st.x = -3.5; st.y = -2;
+      for (var i = 0; i < 6; i++) st.x += K.distanceToObstacle(st, este) - 0.05;
+    } else {
+      st = K.create({ hdg: 0, mode: 'DOCKING' });
+    }
+    K.setWind(st, tuuli.from, tuuli.speed);
+    st.speedFactor = kerroin;
+    st.tiller = 0; st.joyX = 0; st.joyY = 0;
+    s = st;
+    polku = []; lokiPituus = -1; kosketusMaara = 0; viimeisinKn = null;
+    // oletuszoom: lähestymisessä sekä vene että ponttonin keskikohta mahtuvat näkymään, muuten noin 40 m levyinen alue
+    var m = Math.min(W, H) / 2;
+    var ala = este ? Math.max(Math.abs(este.x - st.x), Math.abs(este.y - st.y) + 18) + 4 : 20;
+    nakyma.k = raja(m / (nimi === 'kylki' ? 15 : Math.max(ala, 15)), 2, 60);
+    synkronoiPaneelit();
+    piilotaViesti();
+  }
+
+  // ---------------------------------------------------------------------------------------------
+  // Canvas
+  // ---------------------------------------------------------------------------------------------
+  var cv = $('kanvas'), cx = cv.getContext('2d'), W = 300, H = 300, dpr = 1;
+  function mitoita() {
+    var r = cv.parentNode.getBoundingClientRect();
+    W = Math.max(1, Math.round(r.width)); H = Math.max(1, Math.round(r.height));
+    dpr = Math.min(window.devicePixelRatio || 1, 3);
+    cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+  }
+
+  // Rungon koordinaatit (xb eteen painopisteestä, yb oikealle) maailmaan
+  function rungosta(xb, yb) {
+    var h = s.hdg * RAD, sh = Math.sin(h), ch = Math.cos(h);
+    return [s.x + sh * xb + ch * yb, s.y + ch * xb - sh * yb];
+  }
+  function reitti(pts) {
+    cx.beginPath();
+    for (var i = 0; i < pts.length; i++) { if (i) cx.lineTo(pts[i][0], pts[i][1]); else cx.moveTo(pts[i][0], pts[i][1]); }
+    cx.closePath();
+  }
+  function nuoli(x0, y0, x1, y1, vari, leveysPx, paaPx) {
+    var k = nakyma.k, dx = x1 - x0, dy = y1 - y0, l = Math.hypot(dx, dy);
+    if (l < 1e-6) return;
+    var ux = dx / l, uy = dy / l, ph = Math.min(paaPx / k, l * 0.6), lw = leveysPx / k;
+    cx.strokeStyle = vari; cx.fillStyle = vari; cx.lineWidth = lw; cx.lineCap = 'round';
+    cx.beginPath(); cx.moveTo(x0, y0); cx.lineTo(x1 - ux * ph * 0.7, y1 - uy * ph * 0.7); cx.stroke();
+    cx.beginPath(); cx.moveTo(x1, y1);
+    cx.lineTo(x1 - ux * ph + -uy * ph * 0.5, y1 - uy * ph + ux * ph * 0.5);
+    cx.lineTo(x1 - ux * ph - -uy * ph * 0.5, y1 - uy * ph - ux * ph * 0.5);
+    cx.closePath(); cx.fill();
+  }
+
+  function piirraRuudukko() {
+    var k = nakyma.k, g = k >= RUUDUKKO_RAJA ? 5 : 25, R = Math.hypot(W, H) / 2 / k + g;
+    var i0 = Math.ceil((s.x - R) / g), i1 = Math.floor((s.x + R) / g), j0 = Math.ceil((s.y - R) / g), j1 = Math.floor((s.y + R) / g), i, j, v;
+    cx.lineWidth = 1 / k;
+    for (i = i0; i <= i1; i++) {
+      v = i * g; cx.strokeStyle = v % 25 === 0 ? 'rgba(255,255,255,.26)' : 'rgba(255,255,255,.13)';
+      cx.beginPath(); cx.moveTo(v, s.y - R); cx.lineTo(v, s.y + R); cx.stroke();
+    }
+    for (j = j0; j <= j1; j++) {
+      v = j * g; cx.strokeStyle = v % 25 === 0 ? 'rgba(255,255,255,.26)' : 'rgba(255,255,255,.13)';
+      cx.beginPath(); cx.moveTo(s.x - R, v); cx.lineTo(s.x + R, v); cx.stroke();
+    }
+  }
+
+  // Kelluva ponttoni fendereineen: harmaa, musta reuna, mustat fenderit pitkillä sivuilla ja päissä
+  function piirraPonttoni(ob) {
+    var k = nakyma.k, h = ob.hdg * RAD, sh = Math.sin(h), ch = Math.cos(h), L = ob.lengthM / 2, Wd = ob.widthM / 2, xl, sg;
+    var lok = function (a, b) { return [ob.x + sh * a + ch * b, ob.y + ch * a - sh * b]; };
+    reitti(K.obstaclePolygon(ob));
+    cx.fillStyle = '#8f969c'; cx.fill();
+    cx.strokeStyle = '#111'; cx.lineWidth = Math.max(2 / k, 0.06); cx.lineJoin = 'round'; cx.stroke();
+    // laudoituksen keskiviiva
+    cx.strokeStyle = 'rgba(0,0,0,.25)'; cx.lineWidth = 1 / k;
+    cx.beginPath(); var a = lok(-L, 0), b = lok(L, 0); cx.moveTo(a[0], a[1]); cx.lineTo(b[0], b[1]); cx.stroke();
+    // fenderit: kapeat mustat palkit reunan sisäpuolella, niin että reunan kosketus on fenderin kosketus
+    cx.fillStyle = '#0a0a0a';
+    for (sg = -1; sg <= 1; sg += 2) {
+      for (xl = -L + 1; xl <= L - 0.9; xl += 2) {
+        reitti([lok(xl - 0.4, sg * Wd), lok(xl + 0.4, sg * Wd), lok(xl + 0.4, sg * (Wd - 0.2)), lok(xl - 0.4, sg * (Wd - 0.2))]); cx.fill();
+      }
+    }
+    for (sg = -1; sg <= 1; sg += 2) { reitti([lok(sg * L, -0.45), lok(sg * L, 0.45), lok(sg * (L - 0.2), 0.45), lok(sg * (L - 0.2), -0.45)]); cx.fill(); }
+  }
+
+  function piirraJalki() {
+    if (polku.length < 2) return;
+    cx.strokeStyle = 'rgba(255,255,255,.6)'; cx.lineWidth = 1.3 / nakyma.k; cx.lineJoin = 'round';
+    cx.beginPath(); cx.moveTo(polku[0][0], polku[0][1]);
+    for (var i = 1; i < polku.length; i++) cx.lineTo(polku[i][0], polku[i][1]);
+    cx.lineTo(s.x, s.y); cx.stroke();
+  }
+
+  // Kansi: rungon ääriviiva sisäänpäin siirrettynä
+  function kansiReuna(inset) {
+    var o = SET.hullOutline, lcg = SET.lcgFromTransomM, pts = [], i, xb, yb, n = o.length;
+    for (i = n - 1; i >= 1; i--) {
+      xb = o[i][0] - lcg - (i === n - 1 ? 0.5 : 0) + (i === 1 ? 0.3 : 0); yb = Math.max(0, o[i][1] - inset);
+      pts.push(rungosta(xb, yb));
+    }
+    for (i = 1; i < n; i++) {
+      xb = o[i][0] - lcg - (i === n - 1 ? 0.5 : 0) + (i === 1 ? 0.3 : 0); yb = Math.max(0, o[i][1] - inset);
+      pts.push(rungosta(xb, -yb));
+    }
+    return pts;
+  }
+
+  function piirraRunko() {
+    var k = nakyma.k, P = K.hullPolygon(s);
+    // valkoinen runko
+    reitti(P); cx.fillStyle = '#ffffff'; cx.fill();
+    // kapea punainen raita reunassa (viiva leikataan rungon sisälle, joten näkyvä leveys on puolet)
+    cx.save(); reitti(P); cx.clip();
+    cx.strokeStyle = '#c62828'; cx.lineWidth = Math.max(0.5, 3.6 / k); cx.lineJoin = 'round'; cx.stroke();
+    cx.restore();
+    // vaaleanharmaa kansi
+    reitti(kansiReuna(0.38)); cx.fillStyle = '#d3d8dc'; cx.fill();
+    cx.strokeStyle = 'rgba(0,0,0,.25)'; cx.lineWidth = 1 / k; cx.stroke();
+    // ohjaamo: oranssinpunainen suorakaide 5–8,5 m peräpeilistä
+    var xa = 5 - SET.lcgFromTransomM, xe = 8.5 - SET.lcgFromTransomM, hw = 1.3;
+    reitti([rungosta(xa, -hw), rungosta(xe, -hw), rungosta(xe, hw), rungosta(xa, hw)]);
+    cx.fillStyle = '#d4501f'; cx.fill(); cx.strokeStyle = '#6e260d'; cx.lineWidth = Math.max(1.5 / k, 0.05); cx.lineJoin = 'round'; cx.stroke();
+    // tuulilasi ohjaamon etureunassa
+    reitti([rungosta(xe - 0.55, -hw + 0.15), rungosta(xe - 0.12, -hw + 0.15), rungosta(xe - 0.12, hw - 0.15), rungosta(xe - 0.55, hw - 0.15)]);
+    cx.fillStyle = 'rgba(30,58,78,.85)'; cx.fill();
+    // ääriviiva
+    reitti(P); cx.strokeStyle = '#1b1b1b'; cx.lineWidth = Math.max(1.6 / k, 0.05); cx.lineJoin = 'round'; cx.stroke();
+    // painopiste
+    var c = rungosta(0, 0), r = 3 / k;
+    cx.strokeStyle = 'rgba(0,0,0,.55)'; cx.lineWidth = 1 / k;
+    cx.beginPath(); cx.moveTo(c[0] - r, c[1]); cx.lineTo(c[0] + r, c[1]); cx.moveTo(c[0], c[1] - r); cx.lineTo(c[0], c[1] + r); cx.stroke();
+    // kosketus: punainen reunus rungon ympärillä
+    if (s.inContact) {
+      reitti(P); cx.strokeStyle = '#ff2a2a'; cx.lineWidth = Math.max(5 / k, 0.2); cx.stroke();
+    }
+  }
+
+  // Jettien suuttimet ja työntövektorit perässä: vihreä eteen, punainen taakse
+  function piirraJetit() {
+    var k = nakyma.k, i, yb, p, f, F, ps, dx, dy, fx, fy, nz, h = s.hdg * RAD, sh = Math.sin(h), ch = Math.cos(h);
+    for (i = 0; i < 2; i++) {
+      yb = i === 0 ? -SET.jetYM : SET.jetYM;
+      p = rungosta(SET.nozzleXFromCgM, yb);
+      nz = s.jets[i].nozzle * RAD;
+      // suuttimen asento: lyhyt tanko suihkun suuntaan (+ = suihku oikealle)
+      var e = rungosta(SET.nozzleXFromCgM - Math.cos(nz) * 0.9, yb + Math.sin(nz) * 0.9);
+      cx.strokeStyle = s.jets[i].engaged ? '#222' : '#999'; cx.lineWidth = Math.max(0.22, 3 / k); cx.lineCap = 'round';
+      cx.beginPath(); cx.moveTo(p[0], p[1]); cx.lineTo(e[0], e[1]); cx.stroke();
+      f = s.forces.jets[i]; fx = f.x; fy = f.y;
+      F = Math.hypot(fx, fy);
+      if (F < 150) continue;
+      dx = sh * fx + ch * fy; dy = ch * fx - sh * fy;      // rungon voima maailmaan
+      ps = F * JETTI_SKAALA;
+      nuoli(p[0], p[1], p[0] + dx / F * ps, p[1] + dy / F * ps, fx >= 0 ? '#1fbf3f' : '#e53030', 3.5, 11);
+    }
+  }
+
+  // Nopeusvektori: sininen viiva painopisteestä, 10 s:n ennuste SOG:lla
+  function piirraNopeus() {
+    var v = K.sog(s), c = K.cogTrue(s) * RAD, L = v * ENNUSTE_S;
+    if (L < 0.2) return;
+    nuoli(s.x, s.y, s.x + Math.sin(c) * L, s.y + Math.cos(c) * L, '#2f8bff', 2.6, 9);
+  }
+
+  function piirraKompassi() {
+    var x = W / 2, y = 30, r = 17, h = s.hdg * RAD, a = nakyma.keula ? -h : 0;
+    cx.save(); cx.translate(x, y);
+    cx.fillStyle = 'rgba(10,22,32,.66)'; cx.beginPath(); cx.arc(0, 0, r + 4, 0, 6.2832); cx.fill();
+    cx.rotate(a);
+    cx.fillStyle = '#ff5a4d'; cx.beginPath(); cx.moveTo(0, -r); cx.lineTo(5.5, 3); cx.lineTo(0, 0); cx.lineTo(-5.5, 3); cx.closePath(); cx.fill();
+    cx.fillStyle = '#e8eef2'; cx.beginPath(); cx.moveTo(0, r); cx.lineTo(4, 3); cx.lineTo(0, 0); cx.lineTo(-4, 3); cx.closePath(); cx.fill();
+    cx.restore();
+    // N-kirjain kompassin pohjoispuolella
+    var nx = x + Math.sin(a) * (r + 10), ny = y - Math.cos(a) * (r + 10);
+    cx.font = '700 11px system-ui,sans-serif'; cx.textAlign = 'center'; cx.textBaseline = 'middle';
+    cx.fillStyle = '#fff'; cx.fillText('N', nx, ny);
+    // tuuli: keltainen nuoli kompassin sisällä osoittaa suuntaan, johon tuuli puhaltaa
+    if (s.windSpeed > 0) {
+      var wa = (s.windFrom + 180) * RAD + a;
+      cx.save(); cx.translate(x, y); cx.rotate(wa); cx.strokeStyle = '#ffd400'; cx.fillStyle = '#ffd400'; cx.lineWidth = 2;
+      cx.beginPath(); cx.moveTo(0, 9); cx.lineTo(0, -9); cx.stroke();
+      cx.beginPath(); cx.moveTo(0, -13); cx.lineTo(4.5, -6); cx.lineTo(-4.5, -6); cx.closePath(); cx.fill();
+      cx.restore();
+    }
+    cx.font = '10px system-ui,sans-serif'; cx.fillStyle = 'rgba(255,255,255,.75)';
+    cx.fillText('ruudukko ' + (nakyma.k >= RUUDUKKO_RAJA ? '5' : '25') + ' m', x, y + r + 14);
+  }
+
+  function piirra() {
+    cx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    cx.fillStyle = '#2a6684'; cx.fillRect(0, 0, W, H);
+    cx.save();
+    cx.translate(W / 2, H / 2);
+    if (nakyma.keula) cx.rotate(-s.hdg * RAD);       // keula ylös: maailma kierretään keulasuunnan verran vastapäivään
+    cx.scale(nakyma.k, -nakyma.k);                    // metriä -> pikseliä, y pohjoiseen ylös
+    cx.translate(-s.x, -s.y);
+    piirraRuudukko();
+    if (este) piirraPonttoni(este);
+    piirraJalki();
+    piirraRunko();
+    piirraJetit();
+    piirraNopeus();
+    cx.restore();
+    piirraKompassi();
+  }
+
+  // ---------------------------------------------------------------------------------------------
+  // Mittarit
+  // ---------------------------------------------------------------------------------------------
+  var el = {};
+  ['gHdg', 'gSog', 'gU', 'gV', 'gR', 'gEtaisyys', 'gTuuli', 'gAika', 'gKosketus', 'gEtaisyysLaatikko', 'gKosketusLaatikko'].forEach(function (id) { el[id] = $(id); });
+  function paivitaMittarit() {
+    aseta(el.gHdg, suunta3(s.hdg));
+    aseta(el.gSog, luku(K.sog(s) / KN, 1) + ' kn');
+    aseta(el.gU, merkki(s.v / KN, 1) + ' kn');
+    aseta(el.gV, merkki(s.vs / KN, 1) + ' kn');
+    aseta(el.gR, merkki(s.rate, 1) + ' °/s');
+    if (este) {
+      var d = K.distanceToObstacle(s, este);
+      aseta(el.gEtaisyys, luku(d, 2) + ' m');
+      el.gEtaisyysLaatikko.classList.toggle('vaara', d < 0.5);
+    } else { aseta(el.gEtaisyys, '–'); el.gEtaisyysLaatikko.classList.remove('vaara'); }
+    aseta(el.gTuuli, s.windSpeed > 0 ? suunta3(s.windFrom) + ' ' + luku(s.windSpeed, 1) + ' m/s' : 'tyyni');
+    aseta(el.gAika, aikaTeksti(s.t));
+    aseta(el.gKosketus, kosketusMaara + (viimeisinKn === null ? '' : ' · ' + luku(viimeisinKn, 2) + ' kn'));
+    el.gKosketusLaatikko.classList.toggle('varoitus', !!s.inContact);
+  }
+
+  // ---------------------------------------------------------------------------------------------
+  // Loki
+  // ---------------------------------------------------------------------------------------------
+  var LOKI_NIMET = {
+    mode: function (e) { return 'Tila ' + e.value; },
+    tiller0: function () { return 'TILLER keskelle'; },
+    joy0: function () { return 'JOYSTICK keskelle'; },
+    engage: function (e) { return 'ENGAGE ' + (e.value ? 'STBD' : 'PORT'); },
+    diseng: function (e) { return 'DISENG ' + (e.value ? 'STBD' : 'PORT'); },
+    backup: function (e) { return 'BACKUP PANEL BACKUP ' + (e.value ? 'STBD' : 'PORT'); },
+    auto: function (e) { return 'BACKUP PANEL AUTO ' + (e.value ? 'STBD' : 'PORT'); },
+    engbackup: function (e) { return 'ENGINE BACKUP PANEL BACKUP ' + (e.value ? 'STBD' : 'PORT'); },
+    engauto: function (e) { return 'ENGINE BACKUP PANEL AUTO ' + (e.value ? 'STBD' : 'PORT'); },
+    crash: function () { return 'CRASH STOP'; }
+  };
+  function arvio(kn) { return kn < 0.3 ? ['pehmeä', 'pehmea'] : kn <= 0.6 ? ['tuntuva', 'tuntuva'] : ['kova', 'kova']; }
+
+  // Mallin loki voi kirjata saman osuman usealle rungon pisteelle samalla askeleella: ne yhdistetään yhdeksi kosketukseksi (suurin nopeus)
+  function kosketukset() {
+    var out = [], log = s.cmdLog, i, e;
+    for (i = 0; i < log.length; i++) {
+      e = log[i];
+      if (e.kind !== 'kosketus') continue;
+      var kn = (e.vnMs || 0) / KN, last = out[out.length - 1];
+      if (last && Math.abs(last.t - e.t) < 1e-6) { if (kn > last.kn) last.kn = kn; } else out.push({ t: e.t, kn: kn });
+    }
+    return out;
+  }
+  function paivitaLoki() {
+    var log = s.cmdLog;
+    if (log.length === lokiPituus) return;
+    lokiPituus = log.length;
+    var ko = kosketukset();
+    kosketusMaara = ko.length; viimeisinKn = ko.length ? ko[ko.length - 1].kn : null;
+    var rivit = [], i, e, last = null;
+    for (i = 0; i < log.length; i++) {
+      e = log[i];
+      if (e.kind === 'kosketus') {
+        if (last && last.kosk && Math.abs(last.t - e.t) < 1e-6) continue;
+        last = { t: e.t, kosk: true };
+        var kn = 0;
+        for (var j = 0; j < ko.length; j++) if (Math.abs(ko[j].t - e.t) < 1e-6) kn = ko[j].kn;
+        var a = arvio(kn);
+        rivit.push('<li><span class="lt">' + aikaTeksti(e.t) + '</span><span class="lk">Kosketus</span><span class="lv">' + luku(kn, 2) + ' kn</span><span class="arvio ' + a[1] + '">' + a[0] + '</span></li>');
+      } else {
+        last = null;
+        var f = LOKI_NIMET[e.kind];
+        rivit.push('<li><span class="lt">' + aikaTeksti(e.t) + '</span><span class="lk">' + (f ? f(e) : e.kind) + '</span></li>');
+      }
+    }
+    rivit.reverse();
+    $('loki').innerHTML = rivit.join('');
+    $('lokiTyhja').hidden = rivit.length > 0;
+    aseta($('lokiMaara'), '(' + rivit.length + ')');
+  }
+
+  // ---------------------------------------------------------------------------------------------
+  // Ilmoitukset
+  // ---------------------------------------------------------------------------------------------
+  function ilmoita(teksti, kytkinViesti) {
+    var t = $('toast'); t.textContent = teksti; t.hidden = false;
+    clearTimeout(toastAjastin); toastAjastin = setTimeout(function () { t.hidden = true; }, 3200);
+    if (kytkinViesti) {
+      var v = $('clutchViesti'); v.textContent = teksti;
+      clearTimeout(viestiAjastin); viestiAjastin = setTimeout(function () { v.textContent = ''; }, 5000);
+    }
+  }
+  function piilotaViesti() { $('toast').hidden = true; $('clutchViesti').textContent = ''; }
+
+  // ---------------------------------------------------------------------------------------------
+  // TILLER ja JOYSTICK: sormiveto (pointer events), ohjaimet jäävät asentoonsa
+  // ---------------------------------------------------------------------------------------------
+  var tRaide = $('tillerRaide'), tNuppi = $('tillerNuppi'), jKentta = $('joyKentta'), jNuppi = $('joyNuppi');
+
+  function tillerMitat() { var r = tRaide.getBoundingClientRect(), n = tNuppi.offsetWidth || 46; return { l: r.left + n / 2, w: Math.max(1, r.width - n) }; }
+  function tillerLiike(e) {
+    var m = tillerMitat(), v = ((e.clientX + tillerVeto.siirto - m.l) / m.w) * 2 - 1;
+    v = raja(v, -1, 1); if (Math.abs(v) < 0.03) v = 0;
+    tillerVeto.arvo = v; K.setTiller(s, v);
+  }
+  tRaide.addEventListener('pointerdown', function (e) {
+    if (e.button > 0 || tillerVeto) return;
+    e.preventDefault();
+    var m = tillerMitat(), nx = m.l + (s.tiller + 1) / 2 * m.w;
+    tillerVeto = { id: e.pointerId, siirto: Math.abs(nx - e.clientX) <= 32 ? nx - e.clientX : 0, arvo: s.tiller };
+    try { tRaide.setPointerCapture(e.pointerId); } catch (x) { /* ei tarvita */ }
+    tRaide.classList.add('veto'); tillerLiike(e);
+  });
+  tRaide.addEventListener('pointermove', function (e) { if (tillerVeto && tillerVeto.id === e.pointerId) tillerLiike(e); });
+  function tillerLopeta(e) { if (tillerVeto && tillerVeto.id === e.pointerId) { tillerVeto = null; tRaide.classList.remove('veto'); } }
+  tRaide.addEventListener('pointerup', tillerLopeta);
+  tRaide.addEventListener('pointercancel', tillerLopeta);
+
+  function joyMitat() {
+    var r = jKentta.getBoundingClientRect(), n = jNuppi.offsetWidth || 50;
+    return { cx: r.left + r.width / 2, cy: r.top + r.height / 2, rx: Math.max(1, r.width / 2 - n / 2 - 2), ry: Math.max(1, r.height / 2 - n / 2 - 2) };
+  }
+  function joyLiike(e) {
+    var m = joyMitat(), x = (e.clientX + joyVeto.sx - m.cx) / m.rx, y = -(e.clientY + joyVeto.sy - m.cy) / m.ry;
+    if (s.mode !== 'DOCKING') x = 0;
+    var l = Math.hypot(x, y); if (l > 1) { x /= l; y /= l; }
+    if (Math.abs(x) < 0.04) x = 0;
+    if (Math.abs(y) < 0.04) y = 0;
+    joyVeto.x = x; joyVeto.y = y; K.setJoystick(s, x, y);
+  }
+  jKentta.addEventListener('pointerdown', function (e) {
+    if (e.button > 0 || joyVeto) return;
+    e.preventDefault();
+    var m = joyMitat(), nx = m.cx + s.joyX * m.rx, ny = m.cy - s.joyY * m.ry, near = Math.hypot(nx - e.clientX, ny - e.clientY) <= 36;
+    joyVeto = { id: e.pointerId, sx: near ? nx - e.clientX : 0, sy: near ? ny - e.clientY : 0, x: s.joyX, y: s.joyY };
+    try { jKentta.setPointerCapture(e.pointerId); } catch (x) { /* ei tarvita */ }
+    jKentta.classList.add('veto'); joyLiike(e);
+  });
+  jKentta.addEventListener('pointermove', function (e) { if (joyVeto && joyVeto.id === e.pointerId) joyLiike(e); });
+  function joyLopeta(e) { if (joyVeto && joyVeto.id === e.pointerId) { joyVeto = null; jKentta.classList.remove('veto'); } }
+  jKentta.addEventListener('pointerup', joyLopeta);
+  jKentta.addEventListener('pointercancel', joyLopeta);
+
+  // Nuppien sijainti ja lukemat seuraavat mallin tilaa joka ruudussa (näppäimet, CRASH STOP ja tilanvaihto muuttavat ohjaimia)
+  function paivitaOhjaimet() {
+    var tm = tillerMitat(), jm = joyMitat(), jr = jKentta.getBoundingClientRect();
+    var tt = 'translateX(' + ((s.tiller + 1) / 2 * tm.w).toFixed(1) + 'px)';
+    if (tNuppi._tr !== tt) { tNuppi.style.transform = tt; tNuppi._tr = tt; }
+    var jw = jNuppi.offsetWidth || 50;
+    var jt = 'translate(' + (jr.width / 2 + s.joyX * jm.rx - jw / 2).toFixed(1) + 'px,' + (jr.height / 2 - s.joyY * jm.ry - jw / 2).toFixed(1) + 'px)';
+    if (jNuppi._tr !== jt) { jNuppi.style.left = '0'; jNuppi.style.top = '0'; jNuppi.style.transform = jt; jNuppi._tr = jt; }
+    aseta($('oTiller'), merkki(s.tiller * 100, 0) + ' %');
+    tRaide.setAttribute('aria-valuenow', String(Math.round(s.tiller * 100)));
+    aseta($('oJoy'), s.mode === 'DOCKING' ? 'X ' + merkki(s.joyX * 100, 0) + ' Y ' + merkki(s.joyY * 100, 0) : 'Y ' + merkki(s.joyY * 100, 0) + ' %');
+    jKentta.classList.toggle('transit', s.mode === 'TRANSIT');
+    for (var i = 0; i < tilaNapit.length; i++) {
+      var on = tilaNapit[i].getAttribute('data-tila') === s.mode;
+      tilaNapit[i].classList.toggle('on', on); tilaNapit[i].setAttribute('aria-pressed', on ? 'true' : 'false');
+    }
+  }
+  var tilaNapit = document.querySelectorAll('.tilat button');
+
+  // ---------------------------------------------------------------------------------------------
+  // Paneelit
+  // ---------------------------------------------------------------------------------------------
+  function puoli(el0) { var n = el0.closest('[data-puoli]'); return n ? Number(n.getAttribute('data-puoli')) : 0; }
+  function kytke(ryhma, attr, arvo) {
+    var bs = ryhma.querySelectorAll('button[' + attr + ']');
+    for (var i = 0; i < bs.length; i++) bs[i].classList.toggle('on', bs[i].getAttribute(attr) === String(arvo));
+  }
+
+  // CLUTCH PANEL
+  document.querySelectorAll('#pClutch [data-clutch]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var side = puoli(b), eng = b.getAttribute('data-clutch') === '1';
+      var ok = K.setClutch(s, side, eng);
+      if (!ok) ilmoita('ENGAGE ei onnistu ' + (side ? 'STBD' : 'PORT') + ' jetille, koska JOYSTICK ei ole keskellä. Palauta JOYSTICK keskelle ja yritä uudelleen.', true);
+      else $('clutchViesti').textContent = '';
+    });
+  });
+  document.querySelectorAll('#pClutch [data-bf]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      b.classList.add('vilkkuu'); clearTimeout(b._ajastin);
+      b._ajastin = setTimeout(function () { b.classList.remove('vilkkuu'); }, 3000);   // BACKFLUSH vilkkuu 3 s, ei vaikuta malliin
+    });
+  });
+  $('rIdle').addEventListener('input', function () { K.setIdle(s, Number(this.value)); $('oIdle').textContent = Math.round(s.idleRpm) + ' rpm'; });
+
+  // TRIM–ROLL PANEL: AUTO/BACKUP (säätimet vain näyttönä)
+  document.querySelectorAll('#pTrim [data-trimauto]').forEach(function (b) {
+    b.addEventListener('click', function () { s.trimRollAuto = b.getAttribute('data-trimauto') === '1'; });
+  });
+
+  // BACKUP PANEL
+  function backupSauva(side) {
+    var nz = Number($('rBkNoz' + side).value), ku = Number($('rBkKau' + side).value);
+    K.setBackupStick(s, side, nz / SET.nozzleMaxDeg, ku / 100);
+    aseta($('oBkNoz' + side), merkki(nz, 0) + '°'); aseta($('oBkKau' + side), merkki(ku, 0) + ' %');
+  }
+  document.querySelectorAll('#pBackup [data-backup]').forEach(function (b) {
+    b.addEventListener('click', function () { var side = puoli(b); K.setBackup(s, side, b.getAttribute('data-backup') === '1'); backupSauva(side); });
+  });
+  document.querySelectorAll('#pBackup [data-int]').forEach(function (b) {
+    b.addEventListener('click', function () { K.setBackupSelector(s, puoli(b), b.getAttribute('data-int') === '1'); });
+  });
+  [0, 1].forEach(function (side) {
+    $('rBkNoz' + side).addEventListener('input', function () { backupSauva(side); });
+    $('rBkKau' + side).addEventListener('input', function () { backupSauva(side); });
+  });
+
+  // ENGINE BACKUP PANEL
+  document.querySelectorAll('#pEngine [data-engbackup]').forEach(function (b) {
+    b.addEventListener('click', function () { var side = puoli(b); K.setEngineBackup(s, side, b.getAttribute('data-engbackup') === '1'); K.setEngineBackupRpm(s, side, Number($('rEngRpm' + side).value)); });
+  });
+  [0, 1].forEach(function (side) {
+    $('rEngRpm' + side).addEventListener('input', function () { K.setEngineBackupRpm(s, side, Number(this.value)); aseta($('oEngRpm' + side), String(Math.round(s.jets[side].engineBackupRpm))); });
+  });
+
+  // Paneelien napit ja säätimet seuraavat mallin tilaa (kutsutaan joka ruudussa); elementit haetaan kerran
+  var paneeliEl = [0, 1].map(function (i) {
+    var q = function (sel) { return document.querySelector(sel); };
+    return {
+      engage: q('#pClutch [data-puoli="' + i + '"] [data-clutch="1"]'), diseng: q('#pClutch [data-puoli="' + i + '"] [data-clutch="0"]'),
+      backup: q('#pBackup [data-puoli="' + i + '"]'), engine: q('#pEngine [data-puoli="' + i + '"]'),
+      noz: $('rBkNoz' + i), kau: $('rBkKau' + i), rpm: $('rEngRpm' + i), kauNimi: $('lBkKau' + i)
+    };
+  });
+  function paivitaPaneelitRuudussa() {
+    for (var i = 0; i < 2; i++) {
+      var j = s.jets[i], e = paneeliEl[i];
+      e.engage.classList.toggle('on', j.engaged); e.diseng.classList.toggle('on', !j.engaged);
+      kytke(e.backup, 'data-backup', j.backup ? 1 : 0); kytke(e.backup, 'data-int', j.backupInt ? 1 : 0);
+      e.noz.disabled = !j.backup; e.kau.disabled = !j.backup;
+      var nk = (i ? 'STBD ' : 'PORT ') + (j.backupInt ? 'INTERCEPTOR' : 'BUCKET') + ' ';
+      if (e.kauNimi._n !== nk) { e.kauNimi.firstChild.nodeValue = nk; e.kauNimi._n = nk; }
+      kytke(e.engine, 'data-engbackup', j.engineBackup ? 1 : 0);
+      e.rpm.disabled = !j.engineBackup;
+    }
+    kytke($('pTrim'), 'data-trimauto', s.trimRollAuto ? 1 : 0);
+  }
+  // Nollauksessa säätimet palautetaan lähtöasentoon
+  function synkronoiPaneelit() {
+    $('rIdle').value = String(Math.round(s.idleRpm)); $('oIdle').textContent = Math.round(s.idleRpm) + ' rpm';
+    for (var i = 0; i < 2; i++) {
+      $('rBkNoz' + i).value = '0'; $('rBkKau' + i).value = '0'; $('rEngRpm' + i).value = String(SET.rpmIdle);
+      $('oBkNoz' + i).textContent = '0°'; $('oBkKau' + i).textContent = '0 %'; $('oEngRpm' + i).textContent = String(SET.rpmIdle);
+    }
+    paivitaPaneelitRuudussa();
+  }
+
+  // LCD DISPLAY AND ALARM PANEL: palkit PORT TAB, PORT BUCKET, STBD BUCKET, STBD TAB sekä PORT NOZZLE ja STBD NOZZLE
+  function lcdPystyyn(i, arvo, kauha) {   // kauha: keskeltä ylös eteen ja alas taakse, TAB: alhaalta ylös
+    var f = $('lcdF' + i), pct = Math.round(arvo * 100), h, t;
+    if (kauha) {
+      h = Math.abs(arvo) * 50; t = 'h' + h.toFixed(1) + (arvo < 0 ? 'a' : 'e');
+      if (f._t !== t) {
+        f.style.height = h.toFixed(1) + '%';
+        if (arvo < 0) { f.style.bottom = 'auto'; f.style.top = '50%'; f.classList.add('taakse'); } else { f.style.top = 'auto'; f.style.bottom = '50%'; f.classList.remove('taakse'); }
+        f._t = t;
+      }
+    } else {
+      h = arvo * 100; t = 'h' + h.toFixed(1);
+      if (f._t !== t) { f.style.height = h.toFixed(1) + '%'; f._t = t; }
+    }
+    aseta($('lcdV' + i), (kauha ? merkki(pct, 0) : String(pct)) + ' %');
+  }
+  function lcdVaaka(i, aste) {
+    var f = $('lcdF' + i), w = Math.abs(aste) / SET.nozzleMaxDeg * 50, t = 'w' + w.toFixed(1) + (aste < 0 ? 'l' : 'r');
+    if (f._t !== t) {
+      f.style.width = w.toFixed(1) + '%';
+      if (aste < 0) { f.style.left = 'auto'; f.style.right = '50%'; } else { f.style.right = 'auto'; f.style.left = '50%'; }
+      f._t = t;
+    }
+    aseta($('lcdV' + i), merkki(aste, 1) + '°');
+  }
+  function paivitaLcd() {
+    if (!$('pLcd').open || !$('paneelit').open) return;
+    var p = K.panel(s);
+    lcdPystyyn(0, raja(p[0].tab, 0, 1), false); lcdPystyyn(1, raja(p[0].bucket, -1, 1), true);
+    lcdPystyyn(2, raja(p[1].bucket, -1, 1), true); lcdPystyyn(3, raja(p[1].tab, 0, 1), false);
+    lcdVaaka(4, p[0].nozzle); lcdVaaka(5, p[1].nozzle);
+    aseta($('lcdRpm0'), String(p[0].rpm)); aseta($('lcdRpm1'), String(p[1].rpm));
+    var lamput = '';
+    for (var i = 0; i < 2; i++) {
+      var n = i ? 'STBD' : 'PORT';
+      if (!p[i].engaged) lamput += '<span class="lamppu hael">' + n + ' DISENG</span>';
+      if (p[i].backup) lamput += '<span class="lamppu">' + n + ' BACKUP</span>';
+      if (p[i].engineBackup) lamput += '<span class="lamppu">' + n + ' ENG BACKUP</span>';
+    }
+    var lp = $('lcdLamput');
+    if (lp._h !== lamput) { lp.innerHTML = lamput; lp._h = lamput; }
+  }
+
+  // ---------------------------------------------------------------------------------------------
+  // Yläpalkki, näkymä ja napit
+  // ---------------------------------------------------------------------------------------------
+  function asetaTauko(t) {
+    tauko = t;
+    $('bTauko').setAttribute('aria-pressed', t ? 'true' : 'false');
+    $('bTauko').firstChild.nodeValue = t ? 'Jatka ' : 'Tauko ';
+    $('taukoMerkki').hidden = !t;
+  }
+  function asetaKerroin(k) {
+    kerroin = k; s.speedFactor = k;
+    document.querySelectorAll('#segNopeus button').forEach(function (b) {
+      var on = Number(b.getAttribute('data-v')) === k; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+  }
+  function asetaNakyma(keula) {
+    nakyma.keula = keula;
+    document.querySelectorAll('.nakyma-napit [data-n]').forEach(function (b) {
+      var on = (b.getAttribute('data-n') === 'keula') === keula; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+  }
+  function zoomaa(f) { nakyma.k = raja(nakyma.k * f, 2, 60); }
+  function vaihdaTila() { K.setMode(s, s.mode === 'DOCKING' ? 'TRANSIT' : 'DOCKING'); }
+  function pysayta() {
+    if (!K.crashStop(s)) ilmoita('CRASH STOP vaatii eteenpäin-vauhtia. Vene kulkee eteenpäin alle 0,3 kn.');
+  }
+
+  $('bTauko').addEventListener('click', function () { asetaTauko(!tauko); });
+  $('bNollaa').addEventListener('click', aloita);
+  document.querySelectorAll('#segNopeus button').forEach(function (b) { b.addEventListener('click', function () { asetaKerroin(Number(b.getAttribute('data-v'))); }); });
+  $('selTilanne').addEventListener('change', function () { aloita(); sulje(); });
+  document.querySelectorAll('.nakyma-napit [data-n]').forEach(function (b) { b.addEventListener('click', function () { asetaNakyma(b.getAttribute('data-n') === 'keula'); }); });
+  $('bZoomIn').addEventListener('click', function () { zoomaa(1.25); });
+  $('bZoomUt').addEventListener('click', function () { zoomaa(0.8); });
+  $('bTillerKeskelle').addEventListener('click', function () { K.centreTiller(s); });
+  $('bJoyKeskelle').addEventListener('click', function () { K.centreJoystick(s); });
+  $('bCrash').addEventListener('click', pysayta);
+  document.querySelectorAll('.tilat button').forEach(function (b) { b.addEventListener('click', function () { K.setMode(s, b.getAttribute('data-tila')); }); });
+  $('cbJousi').addEventListener('change', function () { SET.tillerSpring = this.checked; });
+  $('bLokiTyhjenna').addEventListener('click', function () { s.cmdLog.length = 0; lokiPituus = -1; paivitaLoki(); });
+
+  // Tuuli ja lähtötilanne (puhelimessa avattava lista, leveällä näytöllä aina palkissa)
+  function tuuliMuutos() {
+    tuuli.from = Number($('rTuuliSuunta').value); tuuli.speed = Number($('rTuuliNopeus').value);
+    K.setWind(s, tuuli.from, tuuli.speed);
+    $('oTuuliSuunta').textContent = Math.round(tuuli.from) + '°';
+    $('oTuuliNopeus').textContent = tuuli.speed > 0 ? luku(tuuli.speed, 1) + ' m/s' : 'tyyni';
+  }
+  $('rTuuliSuunta').addEventListener('input', tuuliMuutos);
+  $('rTuuliNopeus').addEventListener('input', tuuliMuutos);
+  function sulje() { $('aset').classList.remove('auki'); $('asetBtn').setAttribute('aria-expanded', 'false'); }
+  $('asetBtn').addEventListener('click', function () {
+    var auki = !$('aset').classList.contains('auki');
+    $('aset').classList.toggle('auki', auki); this.setAttribute('aria-expanded', auki ? 'true' : 'false');
+  });
+  document.addEventListener('pointerdown', function (e) {
+    if ($('aset').classList.contains('auki') && !e.target.closest('#aset') && !e.target.closest('#asetBtn')) sulje();
+  });
+
+  // Napit eivät jää kohdistetuiksi, jotta välilyönti (CRASH STOP) ei aktivoi viimeksi painettua nappia
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('button') : null;
+    if (b && e.detail > 0) b.blur();
+  });
+  document.querySelectorAll('input[type=range]').forEach(function (r) {
+    r.addEventListener('change', function () { r.blur(); });
+  });
+
+  // Canvas: hiiren rulla ja kahden sormen nipistys
+  cv.addEventListener('wheel', function (e) { e.preventDefault(); zoomaa(Math.exp(-e.deltaY * (e.deltaMode === 1 ? 0.05 : 0.0015))); }, { passive: false });
+  var osoittimet = {}, nipistys = 0;
+  cv.addEventListener('pointerdown', function (e) {
+    osoittimet[e.pointerId] = { x: e.clientX, y: e.clientY }; nipistys = 0;
+    try { cv.setPointerCapture(e.pointerId); } catch (x) { /* ei tarvita */ }
+  });
+  cv.addEventListener('pointermove', function (e) {
+    if (!osoittimet[e.pointerId]) return;
+    osoittimet[e.pointerId] = { x: e.clientX, y: e.clientY };
+    var ids = Object.keys(osoittimet);
+    if (ids.length === 2) {
+      var a = osoittimet[ids[0]], b = osoittimet[ids[1]], d = Math.hypot(a.x - b.x, a.y - b.y);
+      if (nipistys > 0 && d > 0) zoomaa(d / nipistys);
+      nipistys = d;
+    }
+  });
+  function osoitinPois(e) { delete osoittimet[e.pointerId]; nipistys = 0; }
+  cv.addEventListener('pointerup', osoitinPois);
+  cv.addEventListener('pointercancel', osoitinPois);
+  // iOS Safari: estä sivun oma nipistyszoomi
+  ['gesturestart', 'gesturechange', 'gestureend'].forEach(function (t) { document.addEventListener(t, function (e) { e.preventDefault(); }); });
+
+  // ---------------------------------------------------------------------------------------------
+  // Näppäimistö
+  // ---------------------------------------------------------------------------------------------
+  var NAPPAIMET = { KeyQ: 'tillerL', KeyE: 'tillerR', ArrowUp: 'fwd', ArrowDown: 'aft', ArrowLeft: 'left', ArrowRight: 'right' };
+  document.addEventListener('keydown', function (e) {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    var t = e.target, tag = t && t.tagName, c = e.code;
+    if (tag === 'SELECT' || tag === 'TEXTAREA' || (tag === 'INPUT' && t.type !== 'checkbox')) return;   // säätimet ja valikot saavat omat näppäimensä
+    if (NAPPAIMET[c]) { pidetty[NAPPAIMET[c]] = true; e.preventDefault(); return; }
+    if (c === 'Space') { e.preventDefault(); if (!e.repeat) pysayta(); return; }
+    if (e.repeat) return;
+    switch (c) {
+      case 'KeyS': K.centreTiller(s); break;
+      case 'KeyX': K.centreJoystick(s); break;
+      case 'KeyD': vaihdaTila(); break;
+      case 'KeyP': asetaTauko(!tauko); break;
+      case 'KeyR': aloita(); break;
+      case 'Digit1': case 'Numpad1': asetaKerroin(1); break;
+      case 'Digit2': case 'Numpad2': asetaKerroin(2); break;
+      case 'Digit5': case 'Numpad5': asetaKerroin(5); break;
+      default: return;
+    }
+    e.preventDefault();
+  });
+  document.addEventListener('keyup', function (e) {
+    if (NAPPAIMET[e.code]) { pidetty[NAPPAIMET[e.code]] = false; e.preventDefault(); }
+    else if (e.code === 'Space') e.preventDefault();
+  });
+  window.addEventListener('blur', function () { pidetty = {}; });
+
+  // ---------------------------------------------------------------------------------------------
+  // Silmukka
+  // ---------------------------------------------------------------------------------------------
+  var edellinen = 0, polkuKello = 0;
+  function ruutu(nyt) {
+    var dt = edellinen ? Math.min(0.25, (nyt - edellinen) / 1000) : 0;
+    edellinen = nyt;
+    var k = s.keys;
+    k.tillerL = !!pidetty.tillerL; k.tillerR = !!pidetty.tillerR; k.fwd = !!pidetty.fwd; k.aft = !!pidetty.aft; k.left = !!pidetty.left; k.right = !!pidetty.right;
+    if (!tauko) {
+      if (tillerVeto) K.setTiller(s, tillerVeto.arvo);   // sormiveto voittaa jousipalautuksen ja näppäimet
+      if (joyVeto) K.setJoystick(s, joyVeto.x, joyVeto.y);
+      var kulunut = dt > 0 ? K.stepFrame(s, dt) : 0;
+      if (tillerVeto) K.setTiller(s, tillerVeto.arvo);
+      if (joyVeto) K.setJoystick(s, joyVeto.x, joyVeto.y);
+      if (kulunut > 0) {
+        var l = polku[polku.length - 1];
+        if (!l || Math.hypot(s.x - l[0], s.y - l[1]) > 0.2) { polku.push([s.x, s.y]); if (polku.length > 4000) polku.shift(); }
+      }
+    }
+    paivitaMittarit(); paivitaOhjaimet(); paivitaLoki(); paivitaPaneelitRuudussa(); paivitaLcd();
+    piirra();
+    requestAnimationFrame(ruutu);
+  }
+
+  // ---------------------------------------------------------------------------------------------
+  // Käynnistys
+  // ---------------------------------------------------------------------------------------------
+  mitoita();
+  if (typeof ResizeObserver === 'function') new ResizeObserver(mitoita).observe(cv.parentNode); else window.addEventListener('resize', mitoita);
+  SET.tillerSpring = false;
+  aloita();
+  requestAnimationFrame(ruutu);
+
+  // Testikäyttö: Playwright-testit lukevat ja ohjaavat tilaa tätä kautta
+  window.__kas = {
+    tila: function () { return s; }, ponttoni: function () { return este; }, nakyma: nakyma, K: K,
+    aloita: aloita, tauko: function () { return tauko; }, kosketukset: kosketukset
+  };
+})();
+
+</script>
+</body>
+</html>
