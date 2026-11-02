@@ -72,6 +72,16 @@ Puhelimessa yksi mittari (plotteri tai tutka) ja 3D-näkymä vaihtavat päänäk
 
 ## Komennot ja näppäimet
 
+**Näppäimistöä ei tarvita.** Simulaattoria voi käyttää kokonaan pelkällä hiirellä tai puhelimen ja tabletin kosketusnäytöltä. Kaikilla toiminnoilla on nappi ruudulla:
+
+- Suunta- ja nopeuskäskyt, loiva käännös, peruutus, crash stop ja jetit vapaalle: komentopalstan napit.
+- Plotteri ja tutka: omat napit (zoomaus, keskitys, harppi, EBL ja VRM, RANGE, SEA, OFFSET). Napautus tai klikkaus asettaa EBL:n ja VRM:n, ja veto siirtää karttaa. Puhelimessa kaksi sormea zoomaa.
+- 3D-näkymä: veto kääntää katsetta, reunanapit kääntävät 60°, ja Kiikari- ja Valonheitin-napit ovat näkymässä.
+- Tauko, aikakerroin, mittarin ja näkymän vaihto sekä muut asetukset: yläpalkki ja valikko (≡).
+- Miehistötila: mykistys- ja VHF-napit yläpalkissa, kouluttajalla oma paneeli.
+
+Näppäimet ovat pikanäppäimiä niille, jotka käyttävät tietokonetta:
+
 | Näppäin | Toiminto |
 |---|---|
 | Nuolet vasen ja oikea | Suunta 5° (Shift 10°), peruutuksessa perä vasen ja oikea |
@@ -88,6 +98,7 @@ Puhelimessa yksi mittari (plotteri tai tutka) ja 3D-näkymä vaihtavat päänäk
 | M | Harppi |
 | V | Vektorin aika |
 | P | Tauko |
+| T (pidä pohjassa) | Radiolähetys (VHF) miehistötilassa |
 | 1, 2, 5, 0 | Aikakerroin 1×, 2×, 5×, 10× |
 | O | Tutkan offset |
 | S | Tutkan SEA-säätö (pois, 1, 2, 3, AUTO) |
