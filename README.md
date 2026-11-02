@@ -8,7 +8,7 @@ Simulaattori toimii tietokoneella, tabletilla ja puhelimella ilman asennusta ja 
 >
 > Lisäksi testipalautteen perusteella on korjattu bugeja ja tuotu muutama lisäominaisuus.
 
-**Ei navigointikäyttöön.** Kartta- ja maastoaineistot ovat avointa dataa, joka ei täytä merikartan vaatimuksia.
+**Ei navigointikäyttöön.** Kartta- ja maastoaineistot ovat ajantasaisia virallisia aineistoja (Maanmittauslaitos, Väylävirasto, Traficom), jotka on julkaistu avoimena datana. Simulaattori on kuitenkin koulutusväline eikä navigointilaite, eikä se täytä asianmukaisen merikartan vaatimuksia.
 
 **Ei Meripelastusseuran virallinen ohjelma.** Sovellus on tehty vapaaehtoisena harrastustyönä, eikä se sisällä SARNavin koodia eikä grafiikkaa. Lähdekoodi on julkinen ja annettu Meripelastusseuran käyttöön korvauksetta.
 
