@@ -1233,7 +1233,9 @@
         fA[k] = age > 1e5 ? 0 : (jh[0] + jh[1] * Math.exp(-age / 1.3));
         fT[k] = (jd > 0 && trail && age < 1e5) ? Math.max(0, 1 - age / jd) : 0;
       }
-      var off = (C.suuntaYlos ? S.hdg + C.hairio.suuntavirhe : 0) / 360 * NR, n = EP * EP, p, NRm = NR;
+      // Suuntavirhe (2.11.2026): tutkan saama suuntatieto (gyro tai kompassi) on väärin. Kaiut ovat oikeissa keulasuuntimissa, joten suunta ylös -kuva
+      // ei kierry keulaan nähden, mutta pohjoinen ylös -kuva kiertyy virheen verran. Keulaviiva, pohjoismerkki, HDG ja EBL:n tosisuuntima käyttävät virheellistä suuntaa.
+      var off = (C.suuntaYlos ? S.hdg : -C.hairio.suuntavirhe) / 360 * NR, n = EP * EP, p, NRm = NR;
       var useTrail = jd > 0 && trail;
       for (k = 0; k < NR; k++) {
         var m5 = firstB[k], kq;
@@ -1321,8 +1323,8 @@
       if (canvas.clientWidth !== geom.w || canvas.clientHeight !== geom.h) asettelu();
       var nytMs = S.t, d = geom.dpr, r = geom.r, cx = geom.cx, cy = geom.cy;
       var mpk = ALUEET[C.alueIdx], hdgOff = C.suuntaYlos ? S.hdg + C.hairio.suuntavirhe : 0;
-      var ha = (S.hdg - hdgOff) * RAD, k = C.offset ? OFFSET_K : 1, sx = cx, sy = cy;
-      geom.haDeg = norm360(S.hdg - hdgOff); geom.eaDeg = norm360(C.ebl - hdgOff);   // keulaviivan ja EBL:n suunta kuvassa (testikäyttö)
+      var ha = (S.hdg + C.hairio.suuntavirhe - hdgOff) * RAD, k = C.offset ? OFFSET_K : 1, sx = cx, sy = cy;
+      geom.haDeg = norm360(S.hdg + C.hairio.suuntavirhe - hdgOff); geom.eaDeg = norm360(C.ebl - hdgOff);   // keulaviivan ja EBL:n suunta kuvassa (testikäyttö)
       // offset: oma alus siirtyy keulasuunnan vastaiseen suuntaan 70 % säteestä (suunta ylös -tilassa suoraan alas, pohjoinen ylös -tilassa keulan vastaiseen suuntaan)
       if (C.offset) { sx = cx - Math.sin(ha) * OFFSET_OSUUS * r; sy = cy + Math.cos(ha) * OFFSET_OSUUS * r; }
       geom.sx = sx; geom.sy = sy; geom.k = k;
@@ -1372,7 +1374,7 @@
       tekstiHalolla('RANGE ' + pt(mpk) + ' NM', lx, ty, 'left');
       tekstiHalolla('RR ' + pt(mpk / 4) + ' NM', lx, ty + lh, 'left');
       if (C.offset) tekstiHalolla('OFFSET', lx, ty + 2 * lh, 'left');
-      tekstiHalolla('HDG ' + pad3(S.hdg) + '\u00b0 ' + (C.suuntaYlos ? 'H UP' : 'N UP'), rx, ryy, 'right');
+      tekstiHalolla('HDG ' + pad3(norm360(S.hdg + C.hairio.suuntavirhe)) + '\u00b0 ' + (C.suuntaYlos ? 'H UP' : 'N UP'), rx, ryy, 'right');
       tekstiHalolla('SOG ' + fnum(S.kn, 1).replace(',', '.') + ' kn', rx, ryy + lh, 'right');
       var ry2 = ryy + 2 * lh;
       if (JALJET[C.jalkiIdx] > 0) { tekstiHalolla('TRAIL ' + (JALJET[C.jalkiIdx] >= 60 ? JALJET[C.jalkiIdx] / 60 + ' min' : JALJET[C.jalkiIdx] + ' s'), rx, ry2, 'right'); ry2 += lh; }

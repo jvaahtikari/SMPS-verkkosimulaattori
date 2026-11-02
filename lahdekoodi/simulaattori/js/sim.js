@@ -666,7 +666,7 @@
     G.pl.setHeadUp(!G.northUp); G.pl.setRasterVisible(G.raster); G.view.setHfov(G.fovDeg);
     updateMenuLabels();
     setupRadar();
-    G.hairio = {}; G.hairioT = 0; applyFaults(); koulPanelUi();   // kouluttajan häiriöt alkavat jokaisessa ajossa pois päältä
+    G.hairio = { ilm: {} }; G.hairioT = 0; applyFaults(); koulPanelUi();   // kouluttajan häiriöt alkavat jokaisessa ajossa pois päältä
     // kokonaiskuormitus: maamerkit, turvalaitteet, maasto
     // maasto rakennetaan vasta, kun maamerkit ja turvalaitteet on luettu (latvuskerros jätetään majakoiden ja maamerkkien ympäriltä pois)
     G.view.terrain.setGate(true);
@@ -929,6 +929,7 @@
     doc.addEventListener('keydown', function (e) {
       if (G.mode !== 'run' || e.target.tagName === 'INPUT') return;
       var k = e.key, handled = true;
+      if ((k === 't' || k === 'T') && G.crew.role !== 'solo') { e.preventDefault(); if (!e.repeat) vhf(true); return; }   // radiolähetys (VHF), pidä pohjassa
       // miehistötila: ruorimiehen mittarit peilaavat navigoijaa (ei säätöjä), navigoijalla ei ole komentoja, taukoa eikä aikakerrointa
       if (isHelm() && (k.length === 1 && ',.[]+=-_mMcCvVrRoO'.indexOf(k) >= 0 || k === 'Escape' || k === 'Delete' || k === 'Backspace')) return;
       if (isFollower() && (/^Arrow/.test(k) || k.length === 1 && ' lLpP1250'.indexOf(k) >= 0)) return;
@@ -1149,6 +1150,7 @@
     laskutus: 'Google 3D:n laskutus ei ole käytössä, käytössä oma maisema. Tarkista laskutustili Google Cloudissa.',
     verkko: 'Google 3D ei latautunut (verkkoyhteys), käytössä oma maisema.',
     eiavainta: 'Google 3D -avainta ei saatu palvelimelta, käytössä oma maisema.',
+    eivalmistu: 'Google 3D -maisema ei latautunut, käytössä oma maisema. Tarkista, että avaimen osoiterajaus sallii tämän osoitteen (myös testiosoite).',
     muu: 'Google 3D:ssä oli vika, käytössä oma maisema.'
   };
   function g3Note(syy, detail) {
@@ -1458,10 +1460,10 @@
   // Puheyhteys (puhe.js) avataan miehistötilaan liityttäessä, jos aloitusnäytön Puheyhteys on valittuna.
   G.crew = { role: 'solo', code: '', link: null, conn: '', peer: false, lastRx: 0, snap: null, snapT: 0, prev: null, prevT: 0, recT: -1e9, logSent: 0,
     lastStateT: 0, lastInstrT: 0, lastInstrFull: 0, sentInstr: '', started: false, runId: '', helloT: null, koulRx: 0, navRx: 0, aliveT: 0, logT: 0 };
-  G.hairio = {}; G.hairioT = 0; G.puhe = null;
+  G.hairio = { ilm: {} }; G.hairioT = 0; G.puhe = null;
   var ROLE_NAMES = { helm: 'Ruorimies', nav: 'Navigoija', koul: 'Kouluttaja' };
   // Kouluttajan häiriöt: tutka (tutka.js asetaHairio) ja plotterin kuva
-  var FAULTS = { kohina: 'Tutkan kohina', heikko: 'Tutkan heikko lähetin', suunta: 'Tutkan suuntavirhe 12°', tutka: 'Tutka pimeänä', plotteri: 'Plotteri pimeänä' };
+  var FAULTS = { kohina: 'Tutkan kohina', heikko: 'Tutkan lähetin heikko', suunta: 'Tutkan suuntavirhe', tutka: 'Tutka pimeänä', plotteri: 'Plotteri pimeänä' };
   var MARKS = { hyva: 'hyvä', huomio: 'huomio', virhe: 'virhe' };
   function isNav() { return G.crew.role === 'nav'; }
   function isHelm() { return G.crew.role === 'helm'; }
@@ -1615,19 +1617,32 @@
   }
 
   // ---------- kouluttaja: häiriöt, merkinnät ja tauko (testiversio) ----------
-  // Häiriöiden tila G.hairio = { kohina, heikko, suunta, tutka, plotteri } (true = päällä). Kouluttaja lähettää muutoksen kaikille ('hairio'),
-  // ruorimies kirjaa sen komentolokiin ja lähettää tilan 'tila'-viestissä, jolloin myöhemmin liittyvä navigoija saa saman tilan.
+  // Häiriöiden tila G.hairio = { kohina, heikko, tutka, plotteri: true/false, suunta: asteet (0 = ei virhettä), ilm: { häiriö: true } }.
+  // Kouluttaja lähettää muutoksen kaikille ('hairio'), ruorimies kirjaa sen komentolokiin ja lähettää tilan 'tila'-viestissä, jolloin myöhemmin
+  // liittyvä navigoija saa saman tilan. Häiriö vaikuttaa ruorimiehen ja navigoijan laitteisiin. Kouluttajan oma näkymä pysyy ehjänä, ja hänen
+  // mittareissaan näkyy, mikä miehistön laitteissa on vialla. Ilmoitettu vika (ilm) näkyy miehistön laitteessa vikailmoituksena, muuten vika on hiljainen.
+  function faultOn(v) { return v === true || (typeof v === 'number' && v !== 0); }
+  function faultText(k, v) { return k === 'suunta' ? 'Tutkan suuntavirhe ' + (v > 0 ? '+' : '') + v + '°' : FAULTS[k]; }
+  function faultList(h, keys, onlyIlm) {
+    return keys.filter(function (k) { return faultOn(h[k]) && (!onlyIlm || (h.ilm && h.ilm[k])); }).map(function (k) { return faultText(k, h[k]); });
+  }
   function applyFaults() {
-    var h = G.hairio || {};
-    if (G.radar) G.radar.asetaHairio({ kohina: h.kohina ? 0.7 : 0, heikko: h.heikko ? 0.85 : 0, suuntavirhe: h.suunta ? 12 : 0, pois: !G.radarOn || !!h.tutka });
-    $('plotFault').hidden = !h.plotteri;
+    var h = G.hairio || {}, own = isKoul() ? {} : h;
+    if (G.radar) G.radar.asetaHairio({ kohina: own.kohina ? 0.7 : 0, heikko: own.heikko ? 0.85 : 0, suuntavirhe: Number(own.suunta) || 0, pois: !G.radarOn || !!own.tutka });
+    $('plotFault').hidden = !own.plotteri;
+    // vikailmoitukset mittareissa: kouluttajalle kaikki miehistön viat, miehistölle ilmoitetut
+    var rk = ['kohina', 'heikko', 'suunta', 'tutka'], tr = faultList(h, rk, !isKoul()), tp = faultList(h, ['plotteri'], !isKoul()), pre = isKoul() ? 'Miehistöllä: ' : 'VIKA: ';
+    setText($('faultTagR'), tr.length ? pre + tr.join(', ').toLowerCase() : ''); $('faultTagR').hidden = !tr.length;
+    setText($('faultTagP'), tp.length ? pre + tp.join(', ').toLowerCase() : ''); $('faultTagP').hidden = !tp.length;
   }
   function onFaultMsg(d) {
     if (!d || !FAULTS[d.k]) return;
-    G.hairio = Object.assign({}, G.hairio); G.hairio[d.k] = !!d.on; G.hairioT = performance.now();
-    applyFaults();
-    if (isHelm() && G.S && G.mode === 'run') logCustom('hairio', { k: d.k, on: !!d.on, ilm: !!d.ilm });
-    if (d.ilm && !isKoul()) toast((d.on ? 'Vika: ' : 'Korjattu: ') + FAULTS[d.k].toLowerCase(), 3500);
+    var v = d.k === 'suunta' ? Math.max(-45, Math.min(45, Math.round(Number(d.v) || 0))) : !!d.v, was = G.hairio[d.k];
+    G.hairio = Object.assign({}, G.hairio); G.hairio.ilm = Object.assign({}, G.hairio.ilm); G.hairio[d.k] = v; G.hairio.ilm[d.k] = !!d.ilm && faultOn(v); G.hairioT = performance.now();
+    applyFaults(); koulPanelUi();
+    if (isHelm() && G.S && G.mode === 'run' && d.log !== false) logCustom('hairio', { k: d.k, v: v, ilm: !!d.ilm });
+    if (d.ilm && !isKoul() && d.log !== false) toast(faultOn(v) ? 'Vika: ' + faultText(d.k, v).toLowerCase() : 'Korjattu: ' + FAULTS[d.k].toLowerCase(), 3500);
+    return was;
   }
   function onKoulMsg(m) {   // ruorimies
     if (m.t === 'hairio') onFaultMsg(m.d);
@@ -1635,11 +1650,18 @@
     else if (m.t === 'tauko' && G.mode === 'run' && !!m.d.p !== !!G.paused) togglePause();
   }
   function koulSend(t, d) { if (G.crew.link) G.crew.link.send(t, d); }
-  function koulFault(k) {
+  function koulSetFault(k, v, quiet) {
     if (G.mode !== 'run') return;
-    var d = { k: k, on: !(G.hairio && G.hairio[k]), ilm: $('koulIlm').checked };
-    onFaultMsg(d); koulSend('hairio', d); koulPanelUi();
-    toast(FAULTS[k] + (d.on ? ' päälle' : ' pois') + (d.ilm ? ', ilmoitettu miehistölle' : ''), 1600);
+    var d = { k: k, v: v, ilm: $('koulIlm').checked, log: !quiet };
+    onFaultMsg(d); koulSend('hairio', d);
+    if (!quiet) toast(faultText(k, v) + (faultOn(v) ? ' päälle' : ' pois') + (d.ilm && faultOn(v) ? ', näkyy miehistölle' : faultOn(v) ? ', hiljainen vika' : ''), 1800);
+  }
+  function koulFault(k) { koulSetFault(k, !faultOn(G.hairio && G.hairio[k])); }
+  // Suuntavirheen säätö: muutos näkyy heti, kirjaus purkuun vasta, kun säätö on pysähtynyt 1,5 s
+  function koulSuunta(delta) {
+    var v = delta === 0 ? 0 : Math.max(-45, Math.min(45, (Number(G.hairio.suunta) || 0) + delta));
+    koulSetFault('suunta', v, true);
+    clearTimeout(koulSuunta._t); koulSuunta._t = setTimeout(function () { koulSetFault('suunta', Number(G.hairio.suunta) || 0, false); }, 1500);
   }
   function koulMark(v) { if (G.mode !== 'run') return; koulSend('merkinta', { v: v }); toast('Merkintä: ' + MARKS[v], 1200); }
   function koulTick(now) {   // kouluttajan paneeli: käskyloki ja yhteyden ylläpito
@@ -1656,21 +1678,38 @@
     if (c.logHtml !== html) { c.logHtml = html; $('koulLog').innerHTML = html; }
   }
   function koulPanelUi() {
-    var h = G.hairio || {};
+    var h = G.hairio || {}, sv = Number(h.suunta) || 0;
     Array.prototype.forEach.call(doc.querySelectorAll('#koulFaults button'), function (b) { b.setAttribute('aria-pressed', h[b.getAttribute('data-k')] ? 'true' : 'false'); });
-    $('koulPause').textContent = G.paused ? 'Jatka (kaikille)' : 'Tauko kaikille';
+    setText($('koulSuuntaV'), (sv > 0 ? '+' : '') + sv + '°'); $('koulSuuntaV').classList.toggle('on', sv !== 0);
+    setText($('koulPause'), G.paused ? 'Jatka (kaikille)' : 'Tauko kaikille');
+  }
+  // Radiolähetys (VHF): pidä pohjassa (nappi tai T-näppäin)
+  function bindPtt(btn) {
+    function down(e) { e.preventDefault(); try { btn.setPointerCapture(e.pointerId); } catch (x) {} vhf(true); }
+    function up() { vhf(false); }
+    btn.addEventListener('pointerdown', down); btn.addEventListener('pointerup', up); btn.addEventListener('pointercancel', up); btn.addEventListener('lostpointercapture', up);
+    btn.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+  }
+  function vhf(on) {
+    if (G.crew.role === 'solo' || !G.puhe) return;
+    if (on && !G.puhe.status().started) { voiceOpen(true); return; }
+    G.puhe.setPtt(on);
   }
   function bindKoul() {
     Array.prototype.forEach.call(doc.querySelectorAll('#koulFaults button'), function (b) { b.addEventListener('click', function () { koulFault(b.getAttribute('data-k')); }); });
+    Array.prototype.forEach.call(doc.querySelectorAll('#koulSuunta button'), function (b) { b.addEventListener('click', function () { koulSuunta(Number(b.getAttribute('data-d'))); }); });
     Array.prototype.forEach.call(doc.querySelectorAll('#koulMarks button'), function (b) { b.addEventListener('click', function () { koulMark(b.getAttribute('data-v')); }); });
     $('koulPause').addEventListener('click', function () { if (G.mode === 'run') koulSend('tauko', { p: !G.paused }); });
     $('koulHead').addEventListener('click', function () { var p = $('koulPanel'); p.classList.toggle('min'); $('koulHead').setAttribute('aria-expanded', p.classList.contains('min') ? 'false' : 'true'); });
-    Array.prototype.forEach.call(doc.querySelectorAll('#koulVoice button'), function (b) { b.addEventListener('click', function () { if (G.puhe) G.puhe.setMode(b.getAttribute('data-v')); else voiceOpen(); voiceUi(); }); });
+    Array.prototype.forEach.call(doc.querySelectorAll('#koulVoice button'), function (b) { b.addEventListener('click', function () { if (G.puhe) G.puhe.setMode(b.getAttribute('data-v')); else voiceOpen(true); voiceUi(); }); });
     $('koulNavOnly').addEventListener('change', function () { if (G.puhe) G.puhe.setMode(G.puhe.status().mode, $('koulNavOnly').checked); voiceUi(); });
     $('voiceBtn').addEventListener('click', function () {
       if (!G.puhe || !G.puhe.status().started) { voiceOpen(true); return; }
       G.puhe.setMuted(!G.puhe.status().muted);
     });
+    bindPtt($('vhfBtn')); bindPtt($('koulVhf'));
+    doc.addEventListener('keyup', function (e) { if (e.key === 't' || e.key === 'T') vhf(false); });
+    root.addEventListener('blur', function () { vhf(false); });
   }
 
   // ---------- puheyhteys (testiversio, puhe.js) ----------
@@ -1690,6 +1729,12 @@
     setText(vb, !on ? 'Puhe ✕' : st.muted ? 'Mikki ✕' : 'Mikki ✓');
     vb.setAttribute('aria-label', !on ? 'Puhe ei käytössä, avaa puheyhteys' : st.muted ? 'Mikrofoni mykistetty, avaa' : 'Mikrofoni päällä, mykistä');
     vb.setAttribute('aria-pressed', on && !st.muted ? 'true' : 'false'); vb.classList.toggle('warn', !any); vb.title = txt;
+    // radiolähetys: oma lähetys napissa, muiden lähetys yläpalkin ilmoituksena
+    var vh = $('vhfBtn'), tx = !!(st && st.ptt), rx = st ? st.vhf : [];
+    vh.hidden = G.crew.role === 'solo' || isKoul();
+    vh.classList.toggle('tx', tx); $('koulVhf').classList.toggle('tx', tx);
+    setText($('koulVhf'), tx ? 'Lähetetään radiolla…' : 'Radio (VHF): pidä pohjassa');
+    var ind = $('vhfInd'); ind.hidden = !rx.length; if (rx.length) setText(ind, 'VHF: ' + rx.map(function (r) { return ROLE_NAMES[r].toLowerCase(); }).join(', '));
     if (isKoul()) {
       setText($('koulVoiceSt'), txt);
       Array.prototype.forEach.call(doc.querySelectorAll('#koulVoice button'), function (b) { b.setAttribute('aria-pressed', st && st.started && st.mode === b.getAttribute('data-v') ? 'true' : 'false'); });
@@ -1743,7 +1788,7 @@
     an.radarOffSec = off;
   }
   function cmdLabel(c) {
-    if (c.kind === 'hairio') return 'Kouluttaja: ' + (FAULTS[c.value.k] || c.value.k).toLowerCase() + (c.value.on ? ' päälle' : ' pois') + (c.value.ilm ? ' (ilmoitettu)' : '');
+    if (c.kind === 'hairio') { var hv = c.value.v != null ? c.value.v : c.value.on; return 'Kouluttaja: ' + (faultOn(hv) ? faultText(c.value.k, hv).toLowerCase() + (c.value.ilm ? ' (näkyi miehistölle)' : ' (hiljainen)') : (FAULTS[c.value.k] || c.value.k).toLowerCase() + ' pois'); }
     if (c.kind === 'merkinta') return 'Kouluttajan merkintä: ' + (MARKS[c.value] || c.value);
     if (c.kind === 'tutka') return c.value ? 'Tutka päälle' : 'Tutka pois';
     if (c.kind === 'tutkaviritys') return c.value ? 'Tutkan viritys: hyvä' : 'Tutkan viritys: huono';

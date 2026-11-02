@@ -5,10 +5,12 @@
  * aina pienemmän järjestysnumeron rooli (ruorimies → navigoija → kouluttaja), ja ICE-ehdokkaat lähetetään SDP:n mukana yhdellä viestillä.
  * ICE-palvelimet: /api/simu (Vercelin SIMU_ICE, esim. TURN) tai oletuksena julkinen STUN.
  *
- * Kouluttajalla on kolme tilaa: kuuntele (miehistö ei kuule kouluttajaa), puhu ja radio (VHF:n kaltainen kaistarajattu ääni ja kohina).
- * Puhu ja radio voi rajata vain navigoijalle. Ruorimiehellä ja navigoijalla on mikrofonin mykistys.
+ * Kouluttajalla on kaksi tilaa: kuuntele (miehistö ei kuule kouluttajaa) ja puhu. Puheen voi rajata vain navigoijalle.
+ * Ruorimiehellä ja navigoijalla on mikrofonin mykistys. Kaikilla on radiolähetys (VHF, pidä pohjassa, 2.11.2026): ääni kulkee kaistarajattuna ja
+ * kohinan kanssa. Kouluttajan radiolähetys menee miehistölle (tai vain navigoijalle), miehistön radiolähetys kouluttajalle radioäänenä ja toiselle
+ * miehistön jäsenelle tavallisena puheena (samassa veneessä). Vastaanottajat näkevät, kuka lähettää.
  *
- * Viesti: { t: 'rtc', d: { k: 'hei' | 'tarjous' | 'vastaus' | 'pois', to: rooli tai '*', s: lähettäjän istunto, ts: vastaanottajan istunto, sdp } } */
+ * Viesti: { t: 'rtc', d: { k: 'hei' | 'tarjous' | 'vastaus' | 'pois' | 'vhf', to: rooli tai '*', s: lähettäjän istunto, ts: vastaanottajan istunto, sdp, on } } */
 (function (root) {
   'use strict';
   var RANK = { helm: 0, nav: 1, koul: 2 };
@@ -21,7 +23,7 @@
   function create(opt) {
     var role = opt.role, sid = Math.random().toString(36).slice(2, 10);
     var peers = {}, mic = null, ctx = null, radioTrack = null, noise = null, started = false, starting = null, helloT = null;
-    var muted = false, mode = 'kuuntele', navOnly = false, err = '';
+    var muted = false, mode = 'kuuntele', navOnly = false, err = '', ptt = false, rxVhf = {};
     var iceP = opt.ice || Promise.resolve(DEFAULT_ICE);
 
     function changed() { if (opt.onChange) try { opt.onChange(); } catch (e) {} }
@@ -35,7 +37,7 @@
       }
       starting = navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } }).then(function (s) {
         mic = s; started = true; err = '';
-        if (role === 'koul') buildRadio();
+        buildRadio();
         applyTracks(); hello(); changed();
         return true;
       }, function (e) {
@@ -59,7 +61,7 @@
       helloT = setTimeout(hello, HELLO_MS);
     }
 
-    // Radioääni: kaistanrajaus 300–3000 Hz, kevyt särö ja taustakohina (kouluttajan radiotila)
+    // Radioääni: kaistanrajaus 300–3000 Hz, kevyt särö ja taustakohina (radiolähetys)
     function buildRadio() {
       var AC = root.AudioContext || root.webkitAudioContext; if (!AC) return;
       ctx = new AC();
@@ -78,11 +80,15 @@
 
     // Lähetettävä ääni vastaanottajan roolin mukaan
     function trackFor(to) {
-      var m = mic ? mic.getAudioTracks()[0] : null;
+      var m = mic ? mic.getAudioTracks()[0] : null, radio = radioTrack || m;
       if (!m) return null;
-      if (role !== 'koul') return muted ? null : m;
-      if (mode === 'kuuntele' || (navOnly && to !== 'nav')) return null;
-      return mode === 'radio' && radioTrack ? radioTrack : m;
+      if (role !== 'koul') {
+        if (to === 'koul') return ptt ? radio : muted ? null : m;   // kouluttaja kuulee miehistön puheen ja radiolähetykset
+        return ptt || !muted ? m : null;                            // toinen miehistön jäsen kuulee puheen suoraan
+      }
+      if (navOnly && to !== 'nav') return null;
+      if (ptt) return radio;
+      return mode === 'puhu' ? m : null;
     }
     function applyTracks() {
       Object.keys(peers).forEach(function (r) {
@@ -162,14 +168,23 @@
       } else if (d.k === 'tarjous' && !iInit && d.ts === sid) answer(from, d);
       else if (d.k === 'vastaus' && iInit && d.ts === sid && p && p.rsid === d.s && p.pc) {
         p.pc.setRemoteDescription({ type: 'answer', sdp: d.sdp }).catch(function () {});
-      } else if (d.k === 'pois' && p && p.rsid === d.s) closePeer(from);
+      } else if (d.k === 'pois' && p && p.rsid === d.s) { closePeer(from); if (rxVhf[from]) { rxVhf[from] = false; changed(); } }
+      else if (d.k === 'vhf') { rxVhf[from] = !!d.on; changed(); }
+    }
+    // Radiolähetys (pidä pohjassa): ääni radioäänenä ja vastaanottajille tieto lähetyksestä
+    function setPtt(on) {
+      on = !!on && started; if (on === ptt) return;
+      ptt = on; resumeAudio(); applyTracks();
+      send({ k: 'vhf', to: role === 'koul' && navOnly ? 'nav' : '*', s: sid, on: on });
+      changed();
     }
 
     function setMuted(v) { muted = !!v; applyTracks(); changed(); }
-    function setMode(m, only) { mode = m === 'puhu' || m === 'radio' ? m : 'kuuntele'; if (only != null) navOnly = !!only; resumeAudio(); applyTracks(); changed(); }
+    function setMode(m, only) { mode = m === 'puhu' ? m : 'kuuntele'; if (only != null) navOnly = !!only; resumeAudio(); applyTracks(); changed(); }
     function status() {
       var o = {}; Object.keys(peers).forEach(function (r) { o[r] = peers[r].state; });
-      return { started: started, muted: muted, mode: mode, navOnly: navOnly, err: err, peers: o };
+      var rx = Object.keys(rxVhf).filter(function (r) { return rxVhf[r]; });
+      return { started: started, muted: muted, mode: mode, navOnly: navOnly, err: err, peers: o, ptt: ptt, vhf: rx };
     }
 
     // Siirretyt äänitavut yhteyksittäin (vianetsintä ja testit): { rooli: { sisaan, ulos } }
@@ -186,7 +201,7 @@
     }
 
     if (typeof root.addEventListener === 'function') root.addEventListener('pagehide', function () { if (started) send({ k: 'pois', to: '*', s: sid }); });
-    return { start: start, stop: stop, hello: hello, stats: stats, onSignal: onSignal, setMuted: setMuted, setMode: setMode, status: status, resumeAudio: resumeAudio, sid: sid };
+    return { start: start, stop: stop, hello: hello, stats: stats, onSignal: onSignal, setMuted: setMuted, setPtt: setPtt, setMode: setMode, status: status, resumeAudio: resumeAudio, sid: sid };
   }
 
   root.Puhe = { create: create, NAMES: NAMES, DEFAULT_ICE: DEFAULT_ICE };

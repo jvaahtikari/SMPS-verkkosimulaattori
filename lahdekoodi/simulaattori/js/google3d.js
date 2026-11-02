@@ -340,7 +340,7 @@
         steadyTimer = setTimeout(function () {
           if (my !== seq || !active || ready) return;
           if (retries < 1) { retries++; if (root.console) console.warn('[Google3D] maisema ei valmistunut ' + SETTINGS.steadyTimeoutMs / 1000 + ' s:ssa, kartta luodaan uudelleen'); destroy(); active = false; enable(); }
-          else status('Google ei vastaa (25 s)');
+          else fail('Google 3D -maisema ei valmistunut ' + SETTINGS.steadyTimeoutMs / 1000 + ' s:ssa kahdella yrityksellä.', 'eivalmistu');   // 2.11.2026: harmaa ruutu vaihtuu omaan maisemaan
         }, SETTINGS.steadyTimeoutMs);
       }).catch(function (e) {
         building = false;

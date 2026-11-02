@@ -51,7 +51,7 @@ Rajapinta:
 | `asetaSade(0…1)` | Sadeharso (sadekuuro) ja `asetaSadeSuodatin(0…1)` sadesuodatin, joka vaimentaa harsoa ja heikentää samalla pieniä kaikuja. |
 | `asetaJalki(s)` | Jäljen (trail) kesto 0, 15, 30, 60 tai 180 s. |
 | `asetaVahvistus(0,2…1,5)` | Vastaanottimen vahvistus (gain). |
-| `asetaHairio({kohina, heikko, suuntavirhe, pois, sade})` | Vaihetta 5 varten. `kohina` 0…1 lisää vastaanottimen kohinaa, `heikko` 0…1 heikentää lähettimen tehoa, `suuntavirhe` lisää astetta suuntaan (gyron ryömintä, vain suunta ylös -tilassa), `pois: true` sammuttaa kuvan (tyhjä ruutu), `sade` 0…1 on sama kuin `asetaSade`. |
+| `asetaHairio({kohina, heikko, suuntavirhe, pois, sade})` | Vaihetta 5 varten. `kohina` 0…1 lisää vastaanottimen kohinaa, `heikko` 0…1 heikentää lähettimen tehoa, `suuntavirhe` on tutkan saaman suuntatiedon (gyro tai kompassi) virhe asteina: suunta ylös -kuva pysyy keulaan nähden oikein, mutta HDG, pohjoismerkki ja EBL:n tosisuuntimat ovat virheen verran väärin, ja pohjoinen ylös -kuva kiertyy virheen verran, `pois: true` sammuttaa kuvan (tyhjä ruutu), `sade` 0…1 on sama kuin `asetaSade`. |
 | `asetaViritys('hyva' \| 'huono')` | Vastaanottimen viritys. Hyvä (oletus) piirtää rannan yhtenäisenä ja maan alueena, huono toistaa vaiheen 3c kuvan (ohut rantakaiku, rakeinen maa) ja lisää vastaanottimen kohinaa. Sadeharso ja sadesuodatin ovat erillisiä säätöjä kummassakin tilassa. |
 | `lue()`, `tila()` | Nykyinen alue, rengasväli, EBL, VRM, suunta, nopeus, sijainti ja viritys (`viritys`). `tila()` on sama kutsu toisella nimellä. `hairio.kohina` on huonossa virityksessä vähintään 0,3. |
 | `valmis()` | Lupaus, joka toteutuu, kun nykyisen alueen ruudukko ja turvalaitteet on ladattu. Esikatselu ja testit käyttävät tätä. |
