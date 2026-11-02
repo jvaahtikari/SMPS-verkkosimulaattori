@@ -411,7 +411,7 @@ input[type=date]{margin-top:8px;min-height:48px;font-size:18px;padding:6px 10px;
   <div class="start-inner">
     <h1>Simulaattori</h1>
     <div class="warn" id="testBadge" hidden><b>Testiversio.</b> Kouluttaja ja puheyhteys ovat kokeiltavana. Tuotantoversio on erikseen.</div>
-    <p class="sub">Pv417 Repa Näsijärvellä. Navigointiharjoitus päivällä ja yöllä, yksin tai kahdestaan.</p>
+    <p class="sub">Pv417 Repa Näsijärvellä. Navigointiharjoitus päivällä ja yöllä, yksin, kahdestaan tai kouluttajan kanssa.</p>
 
     <div class="field" role="group" aria-labelledby="lblCrew">
       <div class="lbl" id="lblCrew">Miehistö</div>
@@ -419,7 +419,7 @@ input[type=date]{margin-top:8px;min-height:48px;font-size:18px;padding:6px 10px;
         <button type="button" data-v="solo" class="on">Yksin<small>yksi laite</small></button>
         <button type="button" data-v="nav">Navigoija<small>liittyy koodilla</small></button>
         <button type="button" data-v="helm">Ruorimies<small>aloittaa istunnon</small></button>
-        <button type="button" data-v="koul">Kouluttaja<small>liittyy koodilla (testi)</small></button>
+        <button type="button" data-v="koul">Kouluttaja<small>liittyy koodilla</small></button>
       </div>
       <div id="crewHelm" class="crew-box" hidden>
         <div>Istuntokoodi <b id="crewCode" class="crew-code">----</b></div>
@@ -434,7 +434,7 @@ input[type=date]{margin-top:8px;min-height:48px;font-size:18px;padding:6px 10px;
       </div>
       <!-- puheyhteys (testiversio): ääni kulkee laitteiden välillä suoraan, mikrofonilupa pyydetään liityttäessä -->
       <div id="crewVoiceRow" class="crew-box" hidden>
-        <label class="crew-voice"><input type="checkbox" id="crewVoice" checked> Puheyhteys selaimen kautta (testi)</label>
+        <label class="crew-voice"><input type="checkbox" id="crewVoice" checked> Puheyhteys selaimen kautta</label>
         <div class="hint" id="crewVoiceSt" role="status"></div>
         <div class="hint">Käytä kuulokkeita, jos laitteet ovat samassa tilassa, ettei ääni kierrä. Sivun on oltava auki ja näytön päällä.</div>
       </div>

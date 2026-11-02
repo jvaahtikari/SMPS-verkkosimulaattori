@@ -4,7 +4,7 @@ Suunnitellut, mutta vielä toteuttamattomat asiat. Valmiit ominaisuudet on kuvat
 
 ## Kouluttaja ja vikatilanteet
 
-- **Kouluttajan rooli ja puhe (testiversiossa, haara `testi`):** kouluttaja kolmantena laitteena, tutkan ja plotterin häiriöt, merkinnät purkuun, tauko kaikille ja puheyhteys. Kokeiltava oikeilla laitteilla ja verkoilla (iPhone, mobiiliverkko, TURN-tarve) ennen tuotantoon vientiä.
+- **Kouluttajan rooli ja puhe (julkaistu 2.11.2026):** kouluttaja kolmantena laitteena, tutkan ja plotterin häiriöt, merkinnät purkuun, tauko kaikille, puheyhteys ja radiolähetys. Kokeiltava laajemmin oikeilla laitteilla ja verkoilla (iPhone, mobiiliverkko, TURN-tarve).
 - **Kouluttajan jatko:** tehtävän anto kartalta (kohde navigoijalle), automaattiset hälytykset kouluttajalle (matalikko edessä, poikkeama reitiltä), ajastetut skenaariot, puheen tallenne purkuun (suostumuksella, vain kouluttajan laitteella), moottorin melu puheen taustalle.
 - **Muut viat:** esimerkiksi toisen jetin menetys, ohjausvika tai GPS-katko liikemalliin ja plotteriin.
 
