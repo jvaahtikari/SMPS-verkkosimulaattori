@@ -194,8 +194,12 @@
       sx[j * N + i] = gx; sy[j * N + i] = gy; mx = Math.max(mx, Math.abs(gx), Math.abs(gy));
     }
     var k = 0.5 / (mx * 0.45);   // keskimääräinen kaltevuus noin 0,2 ja huiput saturoituvat
+    // sininen kanava (2.11.2026): korkeuskohina tasattuna 0...1 (järjestysluku), jolloin vaahtomaskin kynnys vastaa suoraan peittoa
+    var ord = new Uint32Array(N * N); for (j = 0; j < N * N; j++) ord[j] = j;
+    ord.sort(function (a, b) { return h[a] - h[b]; });
+    var rank = new Uint8Array(N * N); for (j = 0; j < N * N; j++) rank[ord[j]] = Math.round(j / (N * N - 1) * 255);
     for (j = 0; j < N * N; j++) {
-      var q2 = j * 4; d[q2] = Math.max(0, Math.min(255, Math.round(128 + sx[j] * k * 127))); d[q2 + 1] = Math.max(0, Math.min(255, Math.round(128 + sy[j] * k * 127))); d[q2 + 2] = 128; d[q2 + 3] = 255;
+      var q2 = j * 4; d[q2] = Math.max(0, Math.min(255, Math.round(128 + sx[j] * k * 127))); d[q2 + 1] = Math.max(0, Math.min(255, Math.round(128 + sy[j] * k * 127))); d[q2 + 2] = rank[j]; d[q2 + 3] = 255;
     }
     g.putImageData(id, 0, 0);
     var tex = new THREE.CanvasTexture(cv); tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.minFilter = THREE.LinearMipmapLinearFilter; tex.magFilter = THREE.LinearFilter; tex.anisotropy = 4;
@@ -242,7 +246,7 @@
         '  vec2 wd = uWindDir, wq = vec2(-wd.y, wd.x); float Lp = max(uWaveLen, 0.6);',
         // järviaallokko (30.10.2026, palaute): lyhyt ja jyrkkä, terävät harjat ja leveät pohjat. Aallon profiili exp(ks (sin - 1)): ks kasvaa jyrkkyyden mukana,
         // jolloin harja terävöityy (pehmeän mainingin sijaan). Lyhytharjainen: suuntahajonta noin ±40° ja enemmän lyhyitä aaltoja. cr = harjan osuus vaahtoa varten.
-        '  float loc = clamp(wa / max(uWaveAmp, 0.05), 0.0, 2.5), stp = uSteep * 1.3 * loc, hh = 0.0, cr = 0.0, crw = 0.0, ks = 1.0 + 14.0 * min(stp, 0.25);',
+        '  float loc = clamp(wa / max(uWaveAmp, 0.05), 0.0, 2.5), stp = min(uSteep * 1.3 * loc, 0.26), hh = 0.0, cr = 0.0, crw = 0.0, asum = 0.0, ks = 1.0 + 14.0 * min(stp, 0.25);',
         '#ifdef WATER_TEX',
         '  const int NW = 9;',
         '#else',
@@ -253,7 +257,7 @@
         '    vec2 d = cos(ang) * wd + sin(ang) * wq; float k = 6.28318 / lam, w = sqrt(9.81 * k);',
         '    float fd = 1.0 - smoothstep(lam * 25.0, lam * 70.0, dist), a = stp * 0.7 / (1.0 + 0.22 * fi) * fd;',
         '    float ph = k * dot(d, p) - w * t + fi * 1.913, sn = sin(ph), pr = exp(ks * (sn - 1.0));',
-        '    g += d * (a * ks * 0.5 * cos(ph) * pr); hh += a * pr; if (i < 4) cr = max(cr, pr * fd);',
+        '    g += d * (a * ks * 0.5 * cos(ph) * pr); hh += a * pr; asum += a; if (i < 4) cr = max(cr, pr * fd);',
         '  }',
         '#ifdef WATER_TEX',
         // hienorakenne: kohinatekstuuri tuulen suuntaisessa koordinaatistossa, venytetty poikittain (pitkät harjat), liikkuu tuulen mukana
@@ -289,14 +293,18 @@
         '    glit = n650 * 2.2 + n90 * 0.18;',
         '  }',
         '  c += uSunColor * glit * uSunGlow * smoothstep(0.0, 0.08, uSunDir.y) * (0.35 + 0.65 * smoothstep(0.0, 0.5, fr * 4.0)) * (1.0 - smoothstep(2000.0, 6000.0, dist));',
-        // vaahtopäät: murtuvien harjojen kohdalla (cr), laikuittain kohinan mukaan. Järvellä aallokko on jyrkkää, joten vaahtopäitä alkaa näkyä noin 5 m/s:sta
-        // ja 10-14 m/s tuulessa niitä on selvästi (peitto muutamasta prosentista noin kymmeneen). Kauempana häviää.
-        '  if (uWindSpd > 4.5 && dist < 2500.0) {',
+        // vaahtopäät (2.11.2026, palaute: ristikko): laikkuina siellä, missä usean aallon harjat osuvat yhteen (hh / asum), eikä yksittäisen aallon harjaa pitkin,
+        // jolloin eri suuntiin kulkevat harjat piirsivät valkoisen ristikon. Suuri kohinamaski (useita aallonpituuksia) valitsee murtuvat kohdat ja harjan
+        // suuntainen kohina katkoo ne. Peitto tuulen ja jyrkkyyden mukaan: järvellä vaahtopäitä noin 5 m/s:sta, 10-14 m/s tuulessa muutama prosentti pinnasta.
+        '  if (uWindSpd > 4.5 && dist < 2000.0 && asum > 0.0) {',
         '    vec2 fq = vec2(dot(p, wq), dot(p, wd)); float cf = sqrt(9.81 * Lp / 6.28318);',
-        '    float fn = texture2D(uWaveTex, vec2(fq.x / 7.0, (fq.y - cf * t) / 5.0) * 0.25).g, fn2 = texture2D(uWaveTex, vec2(fq.x / 1.8, (fq.y - cf * t) / 1.2) * 0.25 + 0.5).r;',
-        '    float cov = clamp((uWindSpd - 4.5) / 9.5, 0.0, 1.0) * min(loc, 1.3);',
-        '    float fv = cr * (0.45 + 0.55 * fn) + fn2 * 0.12;',
-        '    float foam = smoothstep(0.86 - 0.14 * cov, 0.92 - 0.14 * cov, fv) * (0.7 + 0.25 * cov) * (1.0 - smoothstep(700.0, 2500.0, dist));',
+        '    float fn = texture2D(uWaveTex, vec2(fq.x / (Lp * 1.3), (fq.y - cf * t) / (Lp * 0.9)) * 0.25).b;',
+        '    float fm = texture2D(uWaveTex, vec2(fq.x / (Lp * 7.0), (fq.y - cf * 0.8 * t) / (Lp * 5.0)) * 0.25 + vec2(0.31, 0.67)).b;',
+        '    float fn2 = texture2D(uWaveTex, vec2(fq.x / 1.8, (fq.y - cf * t) / 1.2) * 0.25 + 0.5).b;',
+        '    float cov = clamp((uWindSpd - 4.5) / 9.5, 0.0, 1.0) * (0.5 + 0.5 * smoothstep(0.03, 0.12, stp)) * smoothstep(0.012, 0.03, stp);',
+        '    float crs = hh / asum, mask = smoothstep(0.88 - 0.46 * cov, 0.96 - 0.46 * cov, fm);',
+        '    float fv = crs * (0.6 + 0.4 * fn) + (fn2 - 0.5) * 0.08;',
+        '    float foam = smoothstep(0.36 - 0.12 * cov, 0.45 - 0.12 * cov, fv) * mask * (0.7 + 0.25 * cov) * step(0.001, cov) * (1.0 - smoothstep(500.0, 2000.0, dist));',
         '    c = mix(c, vec3(0.88, 0.91, 0.93) * (0.25 + 0.75 * uDay) * (1.0 - 0.15 * uCloud), clamp(foam, 0.0, 0.92));',
         '  }',
         '  if (uSpotI > 0.0) c += spotVesi(uSpotPos, uSpotDir, uSpotI, n, v);',
