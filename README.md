@@ -6,7 +6,7 @@ Simulaattori toimii tietokoneella, tabletilla ja puhelimella ilman asennusta ja 
 
 > **Uutta 2.11.2026: kouluttaja ja puheyhteys.** Miehistötilaan voi liittyä kolmantena laitteena kouluttaja, joka seuraa ajoa, käynnistää tutkan ja plotterin häiriöitä, tekee merkintöjä purkuun ja pitää tauon kaikille. Miehistö ja kouluttaja puhuvat keskenään selaimen kautta, ja kaikilla on radiolähetys (VHF). Ominaisuudet ovat uusia, eikä niitä ole vielä kokeiltu laajasti oikeilla laitteilla ja verkoilla. Kuvaus: [Miehistötila](#mitä-simulaattorissa-voi-tehdä). Palaute ja havainnot ovat tervetulleita.
 >
-> **Muut muutokset 2.11.2026:** plotteri ja tutka ovat oletuksena päällä, sivuutusetäisyys näkyy SARNavin tapaan mustassa pallossa (28 = 2,8 kaapelia), aallokko näyttää kovalla tuulella luonnollisemmalta, ruorimies pitää käsketyn nopeuden ilman ylitystä (liukukynnyksellä vene hakee tarkoituksella), Googlen logo pysyy näkyvissä keinunnassa, ja miehistötilan purussa luvut ovat samat kaikilla laitteilla.
+> Lisäksi testipalautteen perusteella on korjattu bugeja ja tuotu muutama lisäominaisuus.
 
 **Ei navigointikäyttöön.** Kartta- ja maastoaineistot ovat avointa dataa, joka ei täytä merikartan vaatimuksia.
 
