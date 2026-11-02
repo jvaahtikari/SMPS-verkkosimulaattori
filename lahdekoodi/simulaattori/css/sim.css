@@ -191,6 +191,7 @@ input[type=date]{margin-top:8px;min-height:48px;font-size:18px;padding:6px 10px;
 /* vaihe 3n: kartta on alin kerros, oma kangas (läpinäkyvä tausta) on sen päällä, ja oma kangas jättää alareunan lähdemerkinnälle */
 .g3d-box{position:absolute;inset:0;z-index:0;pointer-events:none;background:#0d1b27}
 .v3.g3d-over .view3d-canvas{z-index:1}
+.v3.g3d-over{background:#22343c}   /* 2.11.2026: Googlen kartta on ruutua matalampi (logo pysyy näkyvissä), kaistat katon ja oman veden alla */
 .v3.g3d-over .view3d-veil{z-index:2}
 .g3d-box > *{pointer-events:none}
 .keyin{margin-top:8px;width:100%;box-sizing:border-box;min-height:48px;font-size:16px;padding:6px 10px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:#fff}
@@ -203,7 +204,8 @@ input[type=date]{margin-top:8px;min-height:48px;font-size:18px;padding:6px 10px;
 #g3dInfo .hint{white-space:pre-line}
 
 /* Google-tila: Googlen lähdemerkintä (vasen alakulma) jää näkyviin, ja Kiikari-nappi nostetaan sen yläpuolelle (27.10.2026) */
-#pane3d.g3d .bino{bottom:34px}
+#pane3d.g3d .bino{bottom:calc(var(--g3m, 0px) + 40px)}   /* Googlen logon yläpuolelle (logo on reunuksen --g3m yläpuolella) */
+#pane3d.g3d .hud-gaze{bottom:56px}   /* Oma näkymä / Google 3D -napin yläpuolelle (testiraportti 2.11.2026) */
 
 /* SARNav-tyylinen tietopalsta plotterin oikeassa reunassa (28.10.2026, vain ulkoasu) */
 #stage:has(#paneP.main) #pane3d.small:not(.bl){right:calc(var(--pw,0px) + 8px)}
@@ -354,7 +356,7 @@ input[type=date]{margin-top:8px;min-height:48px;font-size:18px;padding:6px 10px;
 /* Yömoodi (vaihe 4, 28.10.2026): valonheittimen säädin, plotterin yönäyttö (sama suodatin kuin Reittikartan yönäytössä) ja Google 3D -kuvan himmennys */
 .spot{left:8px;bottom:60px;display:flex;align-items:center;gap:8px;padding:4px 8px 4px 4px;background:rgba(14,28,40,.78)}
 .spot[hidden]{display:none}
-#pane3d.g3d .spot{bottom:86px}
+#pane3d.g3d .spot{bottom:calc(var(--g3m, 0px) + 92px)}
 .spot button{min-height:44px;padding:4px 12px;border:1px solid var(--line);border-radius:9px;background:rgba(14,28,40,.9);color:#fff;font-weight:650}
 .spot button[aria-pressed=true]{background:#8a6a10;border-color:#ffd24a}
 .spot button.sel{box-shadow:0 0 0 2px #ffd24a inset}
@@ -376,3 +378,29 @@ input[type=date]{margin-top:8px;min-height:48px;font-size:18px;padding:6px 10px;
 .wx-live #segWeather,.wx-live #segWindSpd,.wx-live .windrow{opacity:.45;pointer-events:none}
 #testBadge{border-color:#e0a040}
 #testBadge[hidden]{display:none}
+/* Kapea puhelin (testiraportti 2.11.2026): miehistötilassa yläpalkissa on enimmillään valikko, kello, tila, Mikki, VHF, mittari, aikakerroin ja tauko.
+   Ruorimiehen tauko jäi 375 px:n ruudulla näytön ulkopuolelle, joten palkki tiivistetään. */
+@media (max-width:480px){
+  #bar{gap:2px;padding-left:4px;padding-right:4px}
+  #clock{font-size:14px;padding:0 2px}
+  #bar .ib{min-width:36px}
+  #bar .ib.txt{min-width:38px;padding:0 6px;font-size:13px}
+  #bar .voice-btn,#bar .vhf-btn{font-size:11px;padding:0 5px}
+}
+/* Kouluttajan paneelin paikka (testiraportti 2.11.2026: paneeli peitti 3D:n, tutkan ja Nyt-rivin nappeja).
+   Leveä vaaka-asettelu: paneeli on oma palsta oikealla (komentopalstan paikalla, kouluttajalla ei ole komentoja) ja 3D-näkymä kapenee sen verran.
+   Tabletti pystyssä: paneeli on alareunassa omana kaistanaan, ja näkymät mahtuvat sen yläpuolelle. Puhelin: pienennetty paneeli vasempaan alakulmaan. */
+#game.deck:not(.tp).crew-koul{--cmdw:300px}
+#game.deck:not(.tp).crew-koul #pane3d{right:var(--cmdw)}
+#game.deck:not(.tp).crew-koul #cmd{height:auto}
+#game.deck:not(.tp).crew-koul .koul-panel{top:0;right:0;bottom:var(--koulcmd, 64px);width:var(--cmdw);max-height:none;border-radius:0;border-width:0 0 0 1px;box-shadow:none;z-index:34}
+#game.deck:not(.tp).crew-koul .koul-head{pointer-events:none}
+#game.deck:not(.tp).crew-koul .koul-head::after{content:''}
+#game.deck:not(.tp).crew-koul .koul-panel.min .koul-body{display:block}
+#game.deck.tp.crew-koul{padding-bottom:36vh}
+#game.deck.tp.crew-koul .koul-panel{position:fixed;left:0;right:0;bottom:0;top:auto;width:auto;height:36vh;max-height:none;border-radius:0;border-width:1px 0 0;box-shadow:none}
+#game.deck.tp.crew-koul .koul-panel.min .koul-body{display:block}
+#game.deck.tp.crew-koul .koul-head::after{content:''}
+#game.deck.tp.crew-koul .koul-body{display:grid;grid-template-columns:1fr 1fr;column-gap:14px;align-content:start}
+#game.deck.tp.crew-koul .koul-body .koul-sec:last-child{grid-column:1 / 3}
+@media (max-width:700px){#game.crew-koul .koul-panel.min{left:8px;right:auto;bottom:70px;width:auto}}   /* plotterin zoomausnappien yläpuolelle */

@@ -36,7 +36,10 @@ const URL = SIM + '?aineisto=' + AIN + '&preserve=1&maisema=oma&naytot=both';
   await K.screenshot({ path: OUT + '/koul_1.png' }); await B.screenshot({ path: OUT + '/koul_navi_1.png' });
   // tauko kaikille
   await K.click('#koulPause'); await A.waitForTimeout(1200);
-  console.log('tauko', await A.evaluate(() => __sim.paused), await B.evaluate(() => __sim.paused), await K.textContent('#koulPause'));
+  console.log('tauko', await A.evaluate(() => __sim.paused), await B.evaluate(() => __sim.paused), await K.textContent('#koulPause'), '| navigoijan ilmoitus:', await B.evaluate(() => document.getElementById('toast').hidden ? '' : document.getElementById('toast').textContent));
+  // tutkan viritys peilautuu navigoijalta (navigoija vaihtaa huonoksi valikosta)
+  await B.evaluate(() => { document.getElementById('mTune').click(); }); await A.waitForTimeout(1500);
+  console.log('viritys', await B.evaluate(() => __sim.radar.lue().viritys), await A.evaluate(() => __sim.radar.lue().viritys), await K.evaluate(() => __sim.radar.lue().viritys));
   await K.click('#koulPause'); await A.waitForTimeout(800);
   // äänen reititys: tavut 2 s aikana
   const st = p => p.evaluate(() => __sim.puhe.stats());
@@ -63,6 +66,9 @@ const URL = SIM + '?aineisto=' + AIN + '&preserve=1&maisema=oma&naytot=both';
   await K.screenshot({ path: OUT + '/koul_2.png' });
   await A.evaluate(() => { document.getElementById('mAbort').click(); }); await A.waitForTimeout(2500);
   console.log('purku', await mode(A), await mode(B), await mode(K));
+  await A.waitForTimeout(2000);
+  const nums = p => p.evaluate(() => { const a = __sim.dbAn || {}; return JSON.stringify({ fw: a.fairwayPct != null ? Math.round(a.fairwayPct) : null, dev: a.maxDev ? Math.round(a.maxDev.m) : null, dist: a.distNm != null ? a.distNm.toFixed(3) : (a.distM != null ? Math.round(a.distM) : null), tutka: a.radarVisPct != null ? Math.round(a.radarVisPct) : null }); });
+  console.log('purun luvut ruori/navi/koul', await nums(A), await nums(B), await nums(K));
   console.log('purun loki (navi)', await B.evaluate(() => [...document.querySelectorAll('#dbCmds td:nth-child(2)')].map(t => t.textContent).filter(t => /Kouluttaja/.test(t))));
   console.log('virheet', errs); await b.close();
 })();

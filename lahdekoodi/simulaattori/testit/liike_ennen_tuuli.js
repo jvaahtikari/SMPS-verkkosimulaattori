@@ -1,4 +1,5 @@
-/* Simulaattori – aluksen liikemalli ja simulaation tila.
+/* 2.11.2026: ruorimiehen nopeussäätö päivitetty samaksi kuin liike.js:ssä (vertailu tyynellä koskee tuulimallia, ei säätöä).
+ * Simulaattori – aluksen liikemalli ja simulaation tila.
  *
  * Karkea ja tarkoituksella yksinkertainen malli Pv417 Repalle. Ei hydrodynamiikkaa mutta voimamalli:
  * kiihtyvyys = (T - R) / m, jossa työntö T(vipu, v) = Tmax * vipu * (1 - 0,3 * v / 35 kn) ja vastus R(v) on käyrä,
@@ -56,11 +57,11 @@
     rudderNormalDeg: 15, rudderGentleDeg: 7,   // ruorimiehen tavallisen ja loivan käännöksen ruorikulma
     hdgKp: 1.2, hdgKd: 1.0,               // suunnan P-säätö: ruorikulma = Kp * virhe - Kd * kääntymisnopeus (aste, aste/s)
     hdgDeadDeg: 0.5,
-    leverKpPerKn: 0.04,                   // vivun lisäys nopeusvirhettä kohti (liukukynnyksen yli hän antaa enemmän)
+    leverKpPerKn: 0.07,                   // vivun lisäys nopeusvirhettä kohti (liukukynnyksen yli hän antaa enemmän)
     leverKiPerKnSec: 0.006,               // vivun hidas korjaus nopeusvirheen integraalista (ruorimies hakee oikean asennon)
     leverGuessPerKn: 1 / 35,              // ruorimiehen ensiarvaus vivun asennosta käsketyllä nopeudella (lineaarinen, 28 kn = 80 %)
     leverRatePerSec: 0.3,                 // vivun liikuttamisnopeus (osuutta koko liikkeestä sekunnissa)
-    speedSenseLagSec: 2.5,                // ruorimiehen nopeuden havainnon seuranta
+    speedSenseLagSec: 1.0,                // ruorimiehen nopeuden havainnon seuranta
     radiusLowKn: 5, radiusLowM: 12,       // kääntösäde 5 kn:ssa (oletus)
     radiusHighKn: 30, radiusHighM: 70,    // kääntösäde 30 kn:ssa (oletus)
     turnStaticDegPerSec: 10,   // kääntyminen paikallaan täydellä ruorilla (oletus, tilaajan tarkennus, kalibroidaan oikealla veneellä)
@@ -174,7 +175,7 @@
   }
   function apply(s, o) {
     if (o.kind === 'heading') { s.hmHdg = o.value; s.hmGentle = !!o.gentle; }
-    else if (o.kind === 'speed') { s.hmSpeedKn = o.value; s.leverTrim = o.value < 0 ? leverForSpeed(o.value * KN) : Math.max(0, o.value) * SETTINGS.leverGuessPerKn; }
+    else if (o.kind === 'speed') { s.hmSpeedKn = o.value; s.leverTrim = leverForSpeed(o.value * KN); }
     else if (o.kind === 'stern') { s.hmStern = o.value; }
     else if (o.kind === 'straight') {                  // Suoraan: ruorimies pitää suunnan, jossa alus on (ruorin vaimennus huomioiden)
       s.hmStern = null; s.hmGentle = false;
@@ -268,8 +269,8 @@
     s.speedSense += (s.v / KN - s.speedSense) * (1 - Math.exp(-dt / S.speedSenseLagSec));
     if (vt === 0) { s.leverTrim = 0; return 0; }
     var err = vt - s.speedSense;
-    s.leverTrim = clamp(s.leverTrim + S.leverKiPerKnSec * err * dt, -1, 1);
-    return clamp(s.leverTrim + S.leverKpPerKn * err, -1, 1);
+    if (Math.abs(err) < 2) s.leverTrim = clamp(s.leverTrim + S.leverKiPerKnSec * err * dt, -1, 1);
+    return clamp(s.leverTrim + S.leverKpPerKn * err * (err < 0 ? 2.5 : 1), -1, 1);
   }
 
   // Yksi integrointiaskel dt (s)

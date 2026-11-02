@@ -216,6 +216,7 @@ input[type=date]{margin-top:8px;min-height:48px;font-size:18px;padding:6px 10px;
 /* vaihe 3n: kartta on alin kerros, oma kangas (läpinäkyvä tausta) on sen päällä, ja oma kangas jättää alareunan lähdemerkinnälle */
 .g3d-box{position:absolute;inset:0;z-index:0;pointer-events:none;background:#0d1b27}
 .v3.g3d-over .view3d-canvas{z-index:1}
+.v3.g3d-over{background:#22343c}   /* 2.11.2026: Googlen kartta on ruutua matalampi (logo pysyy näkyvissä), kaistat katon ja oman veden alla */
 .v3.g3d-over .view3d-veil{z-index:2}
 .g3d-box > *{pointer-events:none}
 .keyin{margin-top:8px;width:100%;box-sizing:border-box;min-height:48px;font-size:16px;padding:6px 10px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:#fff}
@@ -228,7 +229,8 @@ input[type=date]{margin-top:8px;min-height:48px;font-size:18px;padding:6px 10px;
 #g3dInfo .hint{white-space:pre-line}
 
 /* Google-tila: Googlen lähdemerkintä (vasen alakulma) jää näkyviin, ja Kiikari-nappi nostetaan sen yläpuolelle (27.10.2026) */
-#pane3d.g3d .bino{bottom:34px}
+#pane3d.g3d .bino{bottom:calc(var(--g3m, 0px) + 40px)}   /* Googlen logon yläpuolelle (logo on reunuksen --g3m yläpuolella) */
+#pane3d.g3d .hud-gaze{bottom:56px}   /* Oma näkymä / Google 3D -napin yläpuolelle (testiraportti 2.11.2026) */
 
 /* SARNav-tyylinen tietopalsta plotterin oikeassa reunassa (28.10.2026, vain ulkoasu) */
 #stage:has(#paneP.main) #pane3d.small:not(.bl){right:calc(var(--pw,0px) + 8px)}
@@ -379,7 +381,7 @@ input[type=date]{margin-top:8px;min-height:48px;font-size:18px;padding:6px 10px;
 /* Yömoodi (vaihe 4, 28.10.2026): valonheittimen säädin, plotterin yönäyttö (sama suodatin kuin Reittikartan yönäytössä) ja Google 3D -kuvan himmennys */
 .spot{left:8px;bottom:60px;display:flex;align-items:center;gap:8px;padding:4px 8px 4px 4px;background:rgba(14,28,40,.78)}
 .spot[hidden]{display:none}
-#pane3d.g3d .spot{bottom:86px}
+#pane3d.g3d .spot{bottom:calc(var(--g3m, 0px) + 92px)}
 .spot button{min-height:44px;padding:4px 12px;border:1px solid var(--line);border-radius:9px;background:rgba(14,28,40,.9);color:#fff;font-weight:650}
 .spot button[aria-pressed=true]{background:#8a6a10;border-color:#ffd24a}
 .spot button.sel{box-shadow:0 0 0 2px #ffd24a inset}
@@ -401,6 +403,32 @@ input[type=date]{margin-top:8px;min-height:48px;font-size:18px;padding:6px 10px;
 .wx-live #segWeather,.wx-live #segWindSpd,.wx-live .windrow{opacity:.45;pointer-events:none}
 #testBadge{border-color:#e0a040}
 #testBadge[hidden]{display:none}
+/* Kapea puhelin (testiraportti 2.11.2026): miehistötilassa yläpalkissa on enimmillään valikko, kello, tila, Mikki, VHF, mittari, aikakerroin ja tauko.
+   Ruorimiehen tauko jäi 375 px:n ruudulla näytön ulkopuolelle, joten palkki tiivistetään. */
+@media (max-width:480px){
+  #bar{gap:2px;padding-left:4px;padding-right:4px}
+  #clock{font-size:14px;padding:0 2px}
+  #bar .ib{min-width:36px}
+  #bar .ib.txt{min-width:38px;padding:0 6px;font-size:13px}
+  #bar .voice-btn,#bar .vhf-btn{font-size:11px;padding:0 5px}
+}
+/* Kouluttajan paneelin paikka (testiraportti 2.11.2026: paneeli peitti 3D:n, tutkan ja Nyt-rivin nappeja).
+   Leveä vaaka-asettelu: paneeli on oma palsta oikealla (komentopalstan paikalla, kouluttajalla ei ole komentoja) ja 3D-näkymä kapenee sen verran.
+   Tabletti pystyssä: paneeli on alareunassa omana kaistanaan, ja näkymät mahtuvat sen yläpuolelle. Puhelin: pienennetty paneeli vasempaan alakulmaan. */
+#game.deck:not(.tp).crew-koul{--cmdw:300px}
+#game.deck:not(.tp).crew-koul #pane3d{right:var(--cmdw)}
+#game.deck:not(.tp).crew-koul #cmd{height:auto}
+#game.deck:not(.tp).crew-koul .koul-panel{top:0;right:0;bottom:var(--koulcmd, 64px);width:var(--cmdw);max-height:none;border-radius:0;border-width:0 0 0 1px;box-shadow:none;z-index:34}
+#game.deck:not(.tp).crew-koul .koul-head{pointer-events:none}
+#game.deck:not(.tp).crew-koul .koul-head::after{content:''}
+#game.deck:not(.tp).crew-koul .koul-panel.min .koul-body{display:block}
+#game.deck.tp.crew-koul{padding-bottom:36vh}
+#game.deck.tp.crew-koul .koul-panel{position:fixed;left:0;right:0;bottom:0;top:auto;width:auto;height:36vh;max-height:none;border-radius:0;border-width:1px 0 0;box-shadow:none}
+#game.deck.tp.crew-koul .koul-panel.min .koul-body{display:block}
+#game.deck.tp.crew-koul .koul-head::after{content:''}
+#game.deck.tp.crew-koul .koul-body{display:grid;grid-template-columns:1fr 1fr;column-gap:14px;align-content:start}
+#game.deck.tp.crew-koul .koul-body .koul-sec:last-child{grid-column:1 / 3}
+@media (max-width:700px){#game.crew-koul .koul-panel.min{left:8px;right:auto;bottom:70px;width:auto}}   /* plotterin zoomausnappien yläpuolelle */
 
 </style>
 </head>
@@ -1608,11 +1636,11 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     hdgKp: 1.2, hdgKd: 1.0,               // suunnan P-säätö: ruorikulma = Kp * virhe - Kd * kääntymisnopeus (aste, aste/s)
     hdgDeadDeg: 0.5,
     hdgKi: 0.25, hdgIMax: 120,             // tuulessa: suuntavirheen integraali (aste x s) ruorikulmaan, enimmäisarvo
-    leverKpPerKn: 0.04,                   // vivun lisäys nopeusvirhettä kohti (liukukynnyksen yli hän antaa enemmän)
+    leverKpPerKn: 0.07,                   // vivun lisäys nopeusvirhettä kohti (liukukynnyksen yli hän antaa enemmän), hidastettaessa 2,5-kertainen
     leverKiPerKnSec: 0.006,               // vivun hidas korjaus nopeusvirheen integraalista (ruorimies hakee oikean asennon)
-    leverGuessPerKn: 1 / 35,              // ruorimiehen ensiarvaus vivun asennosta käsketyllä nopeudella (lineaarinen, 28 kn = 80 %)
+    leverGuessPerKn: 1 / 35,              // (ei enää käytössä 2.11.2026: ensiarvaus on vipu, jolla käsketty nopeus pysyy, leverForSpeed)
     leverRatePerSec: 0.3,                 // vivun liikuttamisnopeus (osuutta koko liikkeestä sekunnissa)
-    speedSenseLagSec: 2.5,                // ruorimiehen nopeuden havainnon seuranta
+    speedSenseLagSec: 1.0,                // ruorimiehen nopeuden havainnon seuranta (2,5 s aiheutti ylitystä)
     radiusLowKn: 5, radiusLowM: 12,       // kääntösäde 5 kn:ssa (oletus)
     radiusHighKn: 30, radiusHighM: 70,    // kääntösäde 30 kn:ssa (oletus)
     turnStaticDegPerSec: 10,   // kääntyminen paikallaan täydellä ruorilla (oletus, tilaajan tarkennus, kalibroidaan oikealla veneellä)
@@ -1749,7 +1777,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     }
     if (!s.engaged && o.kind !== 'gentle') s.engaged = true;   // käsky kytkee jetit
     if (o.kind === 'heading') { s.hmHdg = o.value; s.hmGentle = !!o.gentle; }
-    else if (o.kind === 'speed') { s.hmSpeedKn = o.value; s.leverTrim = o.value < 0 ? leverForSpeed(o.value * KN) : Math.max(0, o.value) * SETTINGS.leverGuessPerKn; }
+    else if (o.kind === 'speed') { s.hmSpeedKn = o.value; s.leverTrim = leverForSpeed(o.value * KN); }
     else if (o.kind === 'stern') { s.hmStern = o.value; }
     else if (o.kind === 'straight') {                  // Suoraan: ruorimies pitää suunnan, jossa alus on (ruorin vaimennus huomioiden)
       s.hmStern = null; s.hmGentle = false;
@@ -1848,13 +1876,15 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     return clamp(sg * rd / S.rudderMaxDeg, -1, 1);
   }
   // Ruorimiehen nopeussäätö: vivun tavoite -1..1. Pito-ohjaus (vipu, joka pitää käsketyn nopeuden) ja virhe lisää vipua.
+  // 2.11.2026 (testiraportti: 12 kn:n käsky nousi 16,8 kn:iin): ensiarvaus on vipu, jolla käsketty nopeus pysyy (ei lineaarinen arvaus, joka liukukynnyksen
+  // takia kasvatti integraattoria liikaa), integraattori kerää vain lähellä tavoitetta, ja hidastettaessa ruorimies vetää vipua reilummin. Ylitys enintään noin 0,3 kn.
   function helmLever(s, dt) {
     var S = SETTINGS, vt = s.hmSpeedKn;
     s.speedSense += (s.v / KN - s.speedSense) * (1 - Math.exp(-dt / S.speedSenseLagSec));
     if (vt === 0) { s.leverTrim = 0; return 0; }
     var err = vt - s.speedSense;
-    s.leverTrim = clamp(s.leverTrim + S.leverKiPerKnSec * err * dt, -1, 1);
-    return clamp(s.leverTrim + S.leverKpPerKn * err, -1, 1);
+    if (Math.abs(err) < 2) s.leverTrim = clamp(s.leverTrim + S.leverKiPerKnSec * err * dt, -1, 1);
+    return clamp(s.leverTrim + S.leverKpPerKn * err * (err < 0 ? 2.5 : 1), -1, 1);
   }
 
   // Tuulen voimat: { fx: pitkittäisvoiman ero tyyneen (N, + eteenpäin), fy: sivuvoima (N, + oikealle), app: näennäisen tuulen nopeus m/s, rel: näennäisen tuulen suunta keulasta (aste, mistä tuulee) }
@@ -11934,7 +11964,7 @@ function shade(col, f) { return [Math.min(1, col[0] * f), Math.min(1, col[1] * f
     tiltDeg: 90,              // 0 = suoraan alas, 90 = vaakasuoraan
     fovMinDeg: 5, fovMaxDeg: 80,   // Map3DElementin fov (pystysuuntainen) hyväksyy 5 ... 80 astetta
     minIntervalMs: 15,        // kameran päivitys joka kuvalla, enintään noin 60 kertaa sekunnissa
-    steadyTimeoutMs: 25000,   // jos kartta ei vakiinnu tässä ajassa, näytetään huomautus
+    steadyTimeoutMs: 60000,   // jos kartta ei vakiinnu tässä ajassa, se luodaan kerran uudelleen ja sitten palataan omaan maisemaan (25 s oli liian tiukka, testiraportti 2.11.2026)
     keyStore: 'sim.googleKey',
     altStore: 'sim.googleAltOffset',
     calibStore: 'sim.googleKalib',
@@ -12203,7 +12233,8 @@ function shade(col, f) { return [Math.min(1, col[0] * f), Math.min(1, col[1] * f
 
     function status(t) { if (opts.onStatus) opts.onStatus(t); }
     // Epäonnistuminen: kartta hylätään ja kutsuja palaa omaan näkymään. syy: 'kiintio', 'avain', 'laskutus', 'verkko' tai 'muu'.
-    function fail(msg, syy) { var wasActive = active; active = false; destroy(); status(''); if (wasActive && opts.onFail) opts.onFail(msg, syy || 'muu'); }
+    function fail(msg, syy) { var wasActive = active; active = false; retries = 0;   // seuraava Google 3D -napin painallus saa taas kaksi yritystä
+      destroy(); status(''); if (wasActive && opts.onFail) opts.onFail(msg, syy || 'muu'); }
     authFailCb = function () { if (map || building) fail('Google hylkäsi avaimen (gm_authFailure). Tarkista Vercelin GOOGLE_API-avain, Maps JavaScript API, laskutus ja viittaajarajaus.', 'avain'); };
     apiErrCb = function (name, syy) { if (map || building) fail('Google Maps -virhe ' + name + '.', syy); };
 
@@ -14801,6 +14832,7 @@ function shade(col, f) { return [Math.min(1, col[0] * f), Math.min(1, col[1] * f
     g.classList.toggle('land', land && !deck); g.classList.toggle('deck', deck); g.classList.toggle('tp', tp);
     G.layout.land = land; G.layout.wide = deck; G.layout.tp = tp; G.layout.tri = false;
     fitCmd();
+    if (isKoul()) g.style.setProperty('--koulcmd', ($('cmd').offsetHeight || 64) + 'px');   // kouluttajan palsta päättyy Käsky/Nyt-rivin yläpuolelle
     applyPanes();
     sizeViews();
   }
@@ -15128,6 +15160,7 @@ function shade(col, f) { return [Math.min(1, col[0] * f), Math.min(1, col[1] * f
     $('pauseIco').innerHTML = G.paused ? '<path d="M7 4l12 8-12 8z" fill="currentColor"/>' : '<path d="M7 5v14M17 5v14" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>';
     $('pauseBtn').setAttribute('aria-pressed', G.paused ? 'true' : 'false');
     toast(G.paused ? 'Tauko' : 'Jatkuu', 900);
+    if (G.S && G.mode === 'run' && !isFollower()) logCustom('tauko', G.paused ? 1 : 0);   // purun lokiin (testiraportti 2.11.2026)
   }
   function bindControls() {
     bindHold($('bLeft'), -1); bindHold($('bRight'), 1);
@@ -15430,7 +15463,7 @@ function shade(col, f) { return [Math.min(1, col[0] * f), Math.min(1, col[1] * f
   // Aluksen tila Googlen kameralaskentaan: sijainti (WGS84), tosisuunta, katseen kääntö, pystykuvakulma samasta kamerasta kuin oma näkymä ja silmän korkeus (istuen tai seisten).
   function g3Params() {
     var S = G.S, v = G.view, ll = P.worldToLonLat(S.x, S.y), st = v.settings;
-    return { lat: ll.lat, lon: ll.lon, hdgTrue: L.trueHdg(S), lookDeg: v.getGazeNow(), vfovDeg: v.vfovRequested(), seated: v.isSeated(), eyeFwdM: st.eyeX - st.pivotX, eyeStbdM: st.eyeY, eyeAboveWaterM: g3Motion() && v.camTilt().eyeY ? v.camTilt().eyeY : v.eyeAboveWaterM() };   // silmän korkeus keinunnan mukaan
+    return { lat: ll.lat, lon: ll.lon, hdgTrue: L.trueHdg(S), lookDeg: v.getGazeNow(), vfovDeg: g3Vfov(), seated: v.isSeated(), eyeFwdM: st.eyeX - st.pivotX, eyeStbdM: st.eyeY, eyeAboveWaterM: g3Motion() && v.camTilt().eyeY ? v.camTilt().eyeY : v.eyeAboveWaterM() };   // silmän korkeus keinunnan mukaan
   }
   // Keinunta Google-kuvaan vasta, kun ensimmäinen maisema on valmis: liikkuva kamera estää Googlen latauksen vakiintumisen (30.10.2026).
   // Testiä varten keinunnan voi kytkeä pois osoitteella ?g3keinunta=0.
@@ -15467,7 +15500,7 @@ function shade(col, f) { return [Math.min(1, col[0] * f), Math.min(1, col[1] * f
     laskutus: 'Google 3D:n laskutus ei ole käytössä, käytössä oma maisema. Tarkista laskutustili Google Cloudissa.',
     verkko: 'Google 3D ei latautunut (verkkoyhteys), käytössä oma maisema.',
     eiavainta: 'Google 3D -avainta ei saatu palvelimelta, käytössä oma maisema.',
-    eivalmistu: 'Google 3D -maisema ei latautunut, käytössä oma maisema. Tarkista, että avaimen osoiterajaus sallii tämän osoitteen (myös testiosoite).',
+    eivalmistu: 'Google 3D -maisema latautui liian hitaasti, käytössä oma maisema. Voit yrittää uudelleen Google 3D -napista. Jos näin käy aina, tarkista avaimen osoiterajaus.',
     muu: 'Google 3D:ssä oli vika, käytössä oma maisema.'
   };
   function g3Note(syy, detail) {
@@ -15488,7 +15521,7 @@ function shade(col, f) { return [Math.min(1, col[0] * f), Math.min(1, col[1] * f
     if (on) {
       // vaihe 3n: oma kangas pysyy näkyvissä Googlen kartan päällä (läpinäkyvä tausta), ja Googlen lisenssimerkinnän kohta alareunassa jää vapaaksi
       G.view.setCalib(root.Google3D.getCalib()); G.view.setFogKm(G.fogKm); G.view.setOverlay(true); applyBoatMode();
-      $('v3').classList.add('g3d-over'); var gS = root.Google3D.SETTINGS; canvas.style.clipPath = 'polygon(0 0, 100% 0, 100% 100%, ' + gS.attribClipW + 'px 100%, ' + gS.attribClipW + 'px calc(100% - ' + gS.attribClipPx + 'px), 0 calc(100% - ' + gS.attribClipPx + 'px))'; $('pane3d').classList.add('g3d');
+      $('v3').classList.add('g3d-over'); G.g3NotchY = null; var gS = root.Google3D.SETTINGS; canvas.style.clipPath = 'polygon(0 0, 100% 0, 100% 100%, ' + gS.attribClipW + 'px 100%, ' + gS.attribClipW + 'px calc(100% - ' + gS.attribClipPx + 'px), 0 calc(100% - ' + gS.attribClipPx + 'px))'; $('pane3d').classList.add('g3d');
     } else {
       canvas.style.visibility = ''; canvas.style.clipPath = ''; G.view.veil.style.visibility = '';
       G.view.setOverlay(false); applyBoatMode();
@@ -15519,19 +15552,40 @@ function shade(col, f) { return [Math.min(1, col[0] * f), Math.min(1, col[1] * f
     updateMenuLabels();
     return true;
   }
+  // Googlen lähdemerkintä (2.11.2026, testiraportti): logo on karttaelementin vasemmassa alakulmassa ja liikkuu keinunnan mukana. Kun keula nousee liu'ussa,
+  // kuva siirtyy alas ja logo putosi ruudun alle. Siksi karttaelementti on ruutua matalampi (reunus G.g3M ylhäällä ja alhaalla, katto ja oma vesi peittävät
+  // kaistat) ja Googlen kuvakulma pienennetään samassa suhteessa, jolloin kuvan mittakaava ja keskipiste pysyvät. Logon kulma pidetään ruudun sisällä,
+  // ja oman kankaan lovi seuraa logoa. Kiikarissa reunusta ei käytetä (katto ei peitä kaistoja).
+  function g3MarginFor(h) { return G.view && G.view.isBino() ? 0 : Math.round(Math.min(64, Math.max(20, h * 0.09))); }
+  function g3Vfov() {
+    var v = G.view, vf = v.vfovRequested(), h = $('v3').clientHeight || 1, m = G.g3M || 0;
+    return m > 0 ? 2 * Math.atan(Math.tan(vf * RAD / 2) * Math.max(0.2, (h - 2 * m) / h)) / RAD : vf;
+  }
+  function g3Notch(y) {
+    var c = G.view ? G.view.canvas : null; if (!c || !(G.ext === 'google')) return;
+    y = Math.round(y); if (Math.abs(y - (G.g3NotchY || -1e9)) < 2) return; G.g3NotchY = y;
+    var W = root.Google3D.SETTINGS.attribClipW;
+    c.style.clipPath = 'polygon(0 0, 100% 0, 100% 100%, ' + W + 'px 100%, ' + W + 'px ' + y + 'px, 0 ' + y + 'px)';
+  }
   function updateGoogle() {
     if (G.ext !== 'google' || !G.g3 || !G.g3.isActive()) return;
+    var el = G.g3.element(), box = el && el.parentNode, hv = $('v3').clientHeight || 1, wv = $('v3').clientWidth || 1, m = g3MarginFor(hv);
+    if (box && G.g3M !== m) { G.g3M = m; box.style.top = box.style.bottom = m + 'px'; $('pane3d').style.setProperty('--g3m', m + 'px'); }
     G.g3.update(g3Params());
     // keinunta (pään vakautuksen jälkeen): Googlen kuva kierretään ja siirretään kuvatasossa samaan asentoon kuin oman kerroksen kamera, koska Googlen kamera
-    // ei käänny horisontin yläpuolelle eikä kallistu. Suurennus peittää reunat.
-    var el = G.g3.element(), ct = g3Motion() ? G.view.camTilt() : null;
-    if (el && !ct) { if (el.style.transform) el.style.transform = ''; }
-    else if (el && ct) {
-      var hpx = el.clientHeight || 1, ppd = hpx / Math.max(10, G.view.vfovRequested()), ty = ct.pitchDeg * ppd, r = ct.rollDeg;
-      var sc = 1 + Math.min(0.35, Math.abs(r) / 45 + 2 * Math.abs(ty) / hpx);
+    // ei käänny horisontin yläpuolelle eikä kallistu. Suurennus peittää kallistuksen paljastamat kulmat.
+    var ct = g3Motion() ? G.view.camTilt() : null, ty = 0, r = 0, sc = 1, eh = hv - 2 * m;
+    if (el && ct) {
+      var ppd = hv / Math.max(10, G.view.vfovRequested()); ty = ct.pitchDeg * ppd; r = ct.rollDeg; sc = 1 + Math.min(0.35, Math.abs(r) / 45);
+    }
+    // logon kulman (elementin vasen alakulma) paikka muunnoksen jälkeen; jos se menisi ruudun alle, siirtoa rajoitetaan
+    var rr = r * RAD, cornerY = function (t) { return hv / 2 + t + sc * (-wv / 2 * Math.sin(rr) + eh / 2 * Math.cos(rr)); };
+    var over = cornerY(ty) - (hv - 3); if (over > 0) ty -= over;
+    if (el) {
       var tf = Math.abs(r) < 0.02 && Math.abs(ty) < 0.3 ? '' : 'translateY(' + ty.toFixed(1) + 'px) rotate(' + r.toFixed(2) + 'deg) scale(' + sc.toFixed(3) + ')';
       if (el.style.transform !== tf) el.style.transform = tf;
     }
+    g3Notch(Math.min(hv - root.Google3D.SETTINGS.attribClipPx, cornerY(ty) - root.Google3D.SETTINGS.attribClipPx * sc - 4));
   }
 
   // ---------- kiikari (vaihe 3g) ----------
@@ -15750,10 +15804,11 @@ function shade(col, f) { return [Math.min(1, col[0] * f), Math.min(1, col[1] * f
   }
   function setSpot(on, id) {
     if (!G.valot) return; on = !!on && G.night.dusk; id = id || spotSel();
+    var was = G.valot.heitin(id).on;
     G.valot.asetaHeitin(id, on);
     if (on && G.crew.role === 'solo') G.spotSel = id;
     spotUi();
-    if (G.S && G.mode === 'run') logCustom('valonheitin', on ? 1 : 0);
+    if (G.S && G.mode === 'run' && was !== on) logCustom('valonheitin', on ? 1 : 0);   // vain muutos (ajon alun sammutukset kirjautuivat turhaan lokiin)
   }
   function toggleSpot(id) { id = id || spotSel(); if (G.valot && !isKoul()) setSpot(!G.valot.heitin(id).on, id); }
   function aimSpot(deg) {
@@ -15861,7 +15916,7 @@ function shade(col, f) { return [Math.min(1, col[0] * f), Math.min(1, col[1] * f
   function crewSendInstr(now) {
     var c = G.crew; if (!c.link || !c.link.isReady() || now - c.lastInstrT < 300) return; c.lastInstrT = now;
     var r = G.radar ? G.radar.lue() : null;
-    var m = { pl: G.pl.mirrorState(), ra: r ? { a: r.alue, e: r.ebl, v: r.vrm, o: r.offset, u: r.suuntaYlos, ev: r.ev, sea: r.sea } : null, i: G.instr, sp: ownSpotMsg() };
+    var m = { pl: G.pl.mirrorState(), ra: r ? { a: r.alue, e: r.ebl, v: r.vrm, o: r.offset, u: r.suuntaYlos, ev: r.ev, sea: r.sea, vi: r.viritys } : null, i: G.instr, sp: ownSpotMsg() };
     var js = JSON.stringify(m); if (js === c.sentInstr && now - c.lastInstrFull < 3000) return;
     c.sentInstr = js; c.lastInstrFull = now; c.link.send('mittarit', m);
   }
@@ -15879,12 +15934,14 @@ function shade(col, f) { return [Math.min(1, col[0] * f), Math.min(1, col[1] * f
       if (m.t === 'hei') { if (!c.peer) crewStatus('Navigoija liittyi.'); c.peer = true; c.link.send('tervetuloa', {}); if (G.mode === 'run' || G.mode === 'loading') crewSendStart(); }
       else if (m.t === 'pois') { c.peer = false; c.lastRx = 0; crewStatus('Navigoija poistui istunnosta.'); }
       else if (m.t === 'mittarit') { c.peer = true; onCrewInstr(m.d); }
+      else if (m.t === 'tutkapurku') mergeDebrief(m.d, null, m.d.r);
     } else if (isFollower()) {
-      if (m.r === 'nav') { if (isKoul() && m.t === 'mittarit') { c.navRx = now; onCrewInstr(m.d, 'nav'); } return; }   // kouluttaja peilaa navigoijan mittarit
+      if (m.r === 'nav') { if (isKoul() && m.t === 'mittarit') { c.navRx = now; onCrewInstr(m.d, 'nav'); } else if (isKoul() && m.t === 'tutkapurku') mergeDebrief(m.d, null, m.d.r); return; }   // kouluttaja peilaa navigoijan mittarit
       if (m.r === 'koul') { if (isNav() && m.t === 'hairio') onFaultMsg(m.d); return; }
       c.lastRx = now;
       if (m.t === 'tervetuloa') { if (!c.started) crewStatus('Liitytty istuntoon ' + c.code + '. Odotetaan, että ruorimies aloittaa ajon.'); }
       else if (m.t === 'aloita') crewStartFrom(m.d);
+      else if (m.t === 'purku') mergeDebrief(m.d, m.d.an, null);
       else if (m.t === 'tila' && m.d.id === c.runId && (G.mode === 'run' || G.mode === 'loading')) onCrewState(m.d);
       else if (m.t === 'loppu' && m.d.id === c.runId && G.mode !== 'debrief' && G.mode !== 'start') {
         if (G.rec) { G.rec.collisions = m.d.col || []; G.rec.groundings = m.d.gr || []; if (m.d.fin) G.rec.finished = true; }
@@ -15903,6 +15960,7 @@ function shade(col, f) { return [Math.min(1, col[0] * f), Math.min(1, col[1] * f
       if (r.offset !== m.ra.o) G.radar.asetaOffset(m.ra.o);
       if (r.ev !== m.ra.ev) G.radar.asetaEV(m.ra.ev);
       if (m.ra.sea != null && r.sea !== m.ra.sea && G.radar.asetaSea) G.radar.asetaSea(m.ra.sea);
+      if (m.ra.vi && r.viritys !== m.ra.vi) G.radar.asetaViritys(m.ra.vi);   // viritys peilataan navigoijalta (ei tallenneta omiin asetuksiin)
       if (Math.abs(r.ebl - m.ra.e) > 0.05) G.radar.asetaEBL(m.ra.e);
       if (Math.abs(r.vrm - m.ra.v) > 1e-4) G.radar.asetaVRM(m.ra.v);
     }
@@ -15921,7 +15979,8 @@ function shade(col, f) { return [Math.min(1, col[0] * f), Math.min(1, col[1] * f
     if (G.S && d.o && (d.o[0] !== G.origin.e || d.o[1] !== G.origin.n)) { crewRebase(d.o); c.snap = null; }
     c.prev = c.snap; c.prevT = c.snapT; c.snap = d; c.snapT = now;
     if (d.log && G.S) d.log.forEach(function (e) { G.S.cmdLog.push(e); });
-    G.frozen = !!d.fr; G.paused = !!d.p; if (d.sp) applyPeerSpot(d.sp, isKoul() ? 'helm' : null);
+    var wasP = G.paused; G.frozen = !!d.fr; G.paused = !!d.p; if (wasP !== G.paused && G.mode === 'run') toast(G.paused ? 'Tauko' : 'Jatkuu', 1200);   // navigoijalle ja kouluttajalle näkyvä merkki tauosta
+    if (d.sp) applyPeerSpot(d.sp, isKoul() ? 'helm' : null);
     if (d.hz && now - G.hairioT > 1500 && JSON.stringify(d.hz) !== JSON.stringify(G.hairio)) { G.hairio = d.hz; applyFaults(); koulPanelUi(); }   // ruorimiehen tila on ratkaiseva (myös kesken ajon liityttäessä)
     if (d.gb) { setText($('groundTitle'), d.gb[0]); setText($('groundText'), d.gb[1]); $('groundBanner').hidden = false; }
     else if (!$('groundBanner').hidden) $('groundBanner').hidden = true;
@@ -15954,11 +16013,12 @@ function shade(col, f) { return [Math.min(1, col[0] * f), Math.min(1, col[1] * f
   }
   function onFaultMsg(d) {
     if (!d || !FAULTS[d.k]) return;
-    var v = d.k === 'suunta' ? Math.max(-45, Math.min(45, Math.round(Number(d.v) || 0))) : !!d.v, was = G.hairio[d.k];
+    var v = d.k === 'suunta' ? Math.max(-45, Math.min(45, Math.round(Number(d.v) || 0))) : !!d.v, was = G.hairio[d.k], wasIlm = !!(G.hairio.ilm && G.hairio.ilm[d.k]);
     G.hairio = Object.assign({}, G.hairio); G.hairio.ilm = Object.assign({}, G.hairio.ilm); G.hairio[d.k] = v; G.hairio.ilm[d.k] = !!d.ilm && faultOn(v); G.hairioT = performance.now();
     applyFaults(); koulPanelUi();
     if (isHelm() && G.S && G.mode === 'run' && d.log !== false) logCustom('hairio', { k: d.k, v: v, ilm: !!d.ilm });
-    if (d.ilm && !isKoul() && d.log !== false) toast(faultOn(v) ? 'Vika: ' + faultText(d.k, v).toLowerCase() : 'Korjattu: ' + FAULTS[d.k].toLowerCase(), 3500);
+    // vikailmoitus miehistölle; korjauksesta ilmoitetaan vain, jos vika oli ilmoitettu (hiljaisesta viasta miehistö ei tiennyt)
+    if (!isKoul() && d.log !== false) { if (faultOn(v) && d.ilm) toast('Vika: ' + faultText(d.k, v).toLowerCase(), 3500); else if (!faultOn(v) && wasIlm) toast('Korjattu: ' + FAULTS[d.k].toLowerCase(), 3500); }
     return was;
   }
   function onKoulMsg(m) {   // ruorimies
@@ -16088,10 +16148,25 @@ function shade(col, f) { return [Math.min(1, col[0] * f), Math.min(1, col[1] * f
     $('game').hidden = true; $('debrief').hidden = false;
     var an = H.analyze(G.rec, G.S); root.__analysis = an;
     radarStats(an);
+    G.dbAn = an; G.dbWhy = why;
+    // Miehistötila (testiraportti 2.11.2026: luvut erosivat laitteittain): purun luvut lasketaan ruorimiehen tallenteesta, ja tutkan käyttö navigoijan laitteesta
+    if (isHelm() && G.crew.link) G.crew.link.send('purku', { id: G.crew.runId, an: debriefShare(an) });
+    if (isNav() && G.crew.link) G.crew.link.send('tutkapurku', { id: G.crew.runId, r: radarPart(an) });
     renderDebrief(an, why);
     requestAnimationFrame(function () { renderDebriefMap(an); });
   }
 
+  var RADAR_KEYS = ['radarUsed', 'radarVisSec', 'radarVisPct', 'radarMainSec', 'radarMainPct', 'radarOffSec'];
+  function radarPart(an) { var o = {}; RADAR_KEYS.forEach(function (k) { o[k] = an[k]; }); return o; }
+  function debriefShare(an) { var o = {}; for (var k in an) if (k !== 'cmdLog' && RADAR_KEYS.indexOf(k) < 0) o[k] = an[k]; return o; }
+  // Toisen laitteen purkutiedot omaan purkuun: an2 = ruorimiehen analyysi (komentoloki pysyy omana, sama kaikilla), r = navigoijan tutkan käyttö
+  function mergeDebrief(d, an2, r) {
+    if (G.mode !== 'debrief' || !G.dbAn || !d || d.id !== G.crew.runId) return;
+    var an = G.dbAn, k;
+    if (an2) for (k in an2) an[k] = an2[k];
+    if (r) for (k in r) an[k] = r[k];
+    renderDebrief(an, G.dbWhy); renderDebriefMap(an);
+  }
   // Tutkan käyttö purkua varten: kuinka suuren osan ajasta tutka oli näkyvissä (päällä ja ruudulla) ja kuinka paljon sitä katsottiin suurena ruutuna
   function radarStats(an) {
     an.radarUsed = G.disp !== 'plot'; an.radarVisSec = 0; an.radarVisPct = null; an.radarMainSec = 0; an.radarMainPct = null; an.radarOffSec = 0;
@@ -16106,6 +16181,7 @@ function shade(col, f) { return [Math.min(1, col[0] * f), Math.min(1, col[1] * f
   }
   function cmdLabel(c) {
     if (c.kind === 'hairio') { var hv = c.value.v != null ? c.value.v : c.value.on; return 'Kouluttaja: ' + (faultOn(hv) ? faultText(c.value.k, hv).toLowerCase() + (c.value.ilm ? ' (näkyi miehistölle)' : ' (hiljainen)') : (FAULTS[c.value.k] || c.value.k).toLowerCase() + ' pois'); }
+    if (c.kind === 'tauko') return c.value ? 'Tauko' : 'Jatkuu';
     if (c.kind === 'merkinta') return 'Kouluttajan merkintä: ' + (MARKS[c.value] || c.value);
     if (c.kind === 'tutka') return c.value ? 'Tutka päälle' : 'Tutka pois';
     if (c.kind === 'tutkaviritys') return c.value ? 'Tutkan viritys: hyvä' : 'Tutkan viritys: huono';

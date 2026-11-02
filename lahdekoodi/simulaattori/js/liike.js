@@ -71,11 +71,11 @@
     hdgKp: 1.2, hdgKd: 1.0,               // suunnan P-säätö: ruorikulma = Kp * virhe - Kd * kääntymisnopeus (aste, aste/s)
     hdgDeadDeg: 0.5,
     hdgKi: 0.25, hdgIMax: 120,             // tuulessa: suuntavirheen integraali (aste x s) ruorikulmaan, enimmäisarvo
-    leverKpPerKn: 0.04,                   // vivun lisäys nopeusvirhettä kohti (liukukynnyksen yli hän antaa enemmän)
+    leverKpPerKn: 0.07,                   // vivun lisäys nopeusvirhettä kohti (liukukynnyksen yli hän antaa enemmän), hidastettaessa 2,5-kertainen
     leverKiPerKnSec: 0.006,               // vivun hidas korjaus nopeusvirheen integraalista (ruorimies hakee oikean asennon)
-    leverGuessPerKn: 1 / 35,              // ruorimiehen ensiarvaus vivun asennosta käsketyllä nopeudella (lineaarinen, 28 kn = 80 %)
+    leverGuessPerKn: 1 / 35,              // (ei enää käytössä 2.11.2026: ensiarvaus on vipu, jolla käsketty nopeus pysyy, leverForSpeed)
     leverRatePerSec: 0.3,                 // vivun liikuttamisnopeus (osuutta koko liikkeestä sekunnissa)
-    speedSenseLagSec: 2.5,                // ruorimiehen nopeuden havainnon seuranta
+    speedSenseLagSec: 1.0,                // ruorimiehen nopeuden havainnon seuranta (2,5 s aiheutti ylitystä)
     radiusLowKn: 5, radiusLowM: 12,       // kääntösäde 5 kn:ssa (oletus)
     radiusHighKn: 30, radiusHighM: 70,    // kääntösäde 30 kn:ssa (oletus)
     turnStaticDegPerSec: 10,   // kääntyminen paikallaan täydellä ruorilla (oletus, tilaajan tarkennus, kalibroidaan oikealla veneellä)
@@ -212,7 +212,7 @@
     }
     if (!s.engaged && o.kind !== 'gentle') s.engaged = true;   // käsky kytkee jetit
     if (o.kind === 'heading') { s.hmHdg = o.value; s.hmGentle = !!o.gentle; }
-    else if (o.kind === 'speed') { s.hmSpeedKn = o.value; s.leverTrim = o.value < 0 ? leverForSpeed(o.value * KN) : Math.max(0, o.value) * SETTINGS.leverGuessPerKn; }
+    else if (o.kind === 'speed') { s.hmSpeedKn = o.value; s.leverTrim = leverForSpeed(o.value * KN); }
     else if (o.kind === 'stern') { s.hmStern = o.value; }
     else if (o.kind === 'straight') {                  // Suoraan: ruorimies pitää suunnan, jossa alus on (ruorin vaimennus huomioiden)
       s.hmStern = null; s.hmGentle = false;
@@ -311,13 +311,15 @@
     return clamp(sg * rd / S.rudderMaxDeg, -1, 1);
   }
   // Ruorimiehen nopeussäätö: vivun tavoite -1..1. Pito-ohjaus (vipu, joka pitää käsketyn nopeuden) ja virhe lisää vipua.
+  // 2.11.2026 (testiraportti: 12 kn:n käsky nousi 16,8 kn:iin): ensiarvaus on vipu, jolla käsketty nopeus pysyy (ei lineaarinen arvaus, joka liukukynnyksen
+  // takia kasvatti integraattoria liikaa), integraattori kerää vain lähellä tavoitetta, ja hidastettaessa ruorimies vetää vipua reilummin. Ylitys enintään noin 0,3 kn.
   function helmLever(s, dt) {
     var S = SETTINGS, vt = s.hmSpeedKn;
     s.speedSense += (s.v / KN - s.speedSense) * (1 - Math.exp(-dt / S.speedSenseLagSec));
     if (vt === 0) { s.leverTrim = 0; return 0; }
     var err = vt - s.speedSense;
-    s.leverTrim = clamp(s.leverTrim + S.leverKiPerKnSec * err * dt, -1, 1);
-    return clamp(s.leverTrim + S.leverKpPerKn * err, -1, 1);
+    if (Math.abs(err) < 2) s.leverTrim = clamp(s.leverTrim + S.leverKiPerKnSec * err * dt, -1, 1);
+    return clamp(s.leverTrim + S.leverKpPerKn * err * (err < 0 ? 2.5 : 1), -1, 1);
   }
 
   // Tuulen voimat: { fx: pitkittäisvoiman ero tyyneen (N, + eteenpäin), fy: sivuvoima (N, + oikealle), app: näennäisen tuulen nopeus m/s, rel: näennäisen tuulen suunta keulasta (aste, mistä tuulee) }

@@ -35,7 +35,7 @@
     tiltDeg: 90,              // 0 = suoraan alas, 90 = vaakasuoraan
     fovMinDeg: 5, fovMaxDeg: 80,   // Map3DElementin fov (pystysuuntainen) hyväksyy 5 ... 80 astetta
     minIntervalMs: 15,        // kameran päivitys joka kuvalla, enintään noin 60 kertaa sekunnissa
-    steadyTimeoutMs: 25000,   // jos kartta ei vakiinnu tässä ajassa, näytetään huomautus
+    steadyTimeoutMs: 60000,   // jos kartta ei vakiinnu tässä ajassa, se luodaan kerran uudelleen ja sitten palataan omaan maisemaan (25 s oli liian tiukka, testiraportti 2.11.2026)
     keyStore: 'sim.googleKey',
     altStore: 'sim.googleAltOffset',
     calibStore: 'sim.googleKalib',
@@ -304,7 +304,8 @@
 
     function status(t) { if (opts.onStatus) opts.onStatus(t); }
     // Epäonnistuminen: kartta hylätään ja kutsuja palaa omaan näkymään. syy: 'kiintio', 'avain', 'laskutus', 'verkko' tai 'muu'.
-    function fail(msg, syy) { var wasActive = active; active = false; destroy(); status(''); if (wasActive && opts.onFail) opts.onFail(msg, syy || 'muu'); }
+    function fail(msg, syy) { var wasActive = active; active = false; retries = 0;   // seuraava Google 3D -napin painallus saa taas kaksi yritystä
+      destroy(); status(''); if (wasActive && opts.onFail) opts.onFail(msg, syy || 'muu'); }
     authFailCb = function () { if (map || building) fail('Google hylkäsi avaimen (gm_authFailure). Tarkista Vercelin GOOGLE_API-avain, Maps JavaScript API, laskutus ja viittaajarajaus.', 'avain'); };
     apiErrCb = function (name, syy) { if (map || building) fail('Google Maps -virhe ' + name + '.', syy); };
 

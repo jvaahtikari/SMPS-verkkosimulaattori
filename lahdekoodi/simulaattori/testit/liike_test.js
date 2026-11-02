@@ -54,7 +54,8 @@ function nopeusKoe(kn, sek, alku) {
     const vaihtelu = Math.max(...loppu) - Math.min(...loppu);
     ehto('nopeuskäsky ' + kn + ' kn: vaihtelu viimeisten 10 s aikana alle 1 kn', vaihtelu < 1, vaihtelu.toFixed(2) + ' kn');
   }
-  for (const [kn, hakee] of [[10, false], [12, false], [15, true], [16, true], [18, false]]) {
+  // 2.11.2026: ruorimiehen säätö pitää myös 15 ja 16 kn liukukynnyksellä (aiemmin vene haki, ja käsky ylittyi 30-40 %)
+  for (const [kn, hakee] of [[10, false], [12, false], [15, false], [16, false], [18, false]]) {
     const k = nopeusKoe(kn, 300), loppu = k.lo.slice(-3000), min = Math.min(...loppu), max = Math.max(...loppu);
     ehto('nopeuskäsky ' + kn + ' kn (liukukynnys): viimeisten 60 s vaihteluväli ' + min.toFixed(1) + ' ... ' + max.toFixed(1) + ' kn', hakee ? (max - min) > 2 : (max - min) < 1, hakee ? 'vene hakee' : 'pysyy');
   }
